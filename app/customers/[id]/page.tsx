@@ -17,6 +17,7 @@ type CustomerProfile = {
     order_date: string;
     total_amount: number;
     status: string;
+    payment_method?: string;
   }>;
   cart_items?: Array<{
     cart_item_id: number;
@@ -126,41 +127,39 @@ export default function CustomerDetailPage() {
               <div className="p-0">
                 {!profile.orders?.length ? (
                   <div className="p-12 text-center text-slate-400 italic">No orders recorded for this customer.</div>
-                orders?: Array<{
-                  order_id: number;
-                  order_date: string;
-                  total_amount: number;
-                  status: string;
-                  payment_method?: string;
-                }>;
-                ...
-                                    <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest">
-                                      <tr>
-                                        <th className="px-6 py-3">Order ID</th>
-                                        <th className="px-6 py-3">Status</th>
-                                        <th className="px-6 py-3">Payment</th>
-                                        <th className="px-6 py-3 text-right">Total</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                      {profile.orders.map((order) => (
-                                        <tr key={order.order_id} className="hover:bg-slate-50 transition-colors">
-                                          <td className="px-6 py-4 font-bold text-slate-900">#{order.order_id}</td>
-                                          <td className="px-6 py-4">
-                                            <span className={`saas-badge ${order.status === "delivered" ? "saas-badge-success" : "saas-badge-info"}`}>
-                                              {order.status}
-                                            </span>
-                                          </td>
-                                          <td className="px-6 py-4">
-                                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">
-                                              {order.payment_method || "N/A"}
-                                            </span>
-                                          </td>
-                                          <td className="px-6 py-4 text-right font-black text-slate-900">${order.total_amount}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest">
+                        <tr>
+                          <th className="px-6 py-3">Order ID</th>
+                          <th className="px-6 py-3">Status</th>
+                          <th className="px-6 py-3">Payment</th>
+                          <th className="px-6 py-3 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {profile.orders.map((order) => (
+                          <tr key={order.order_id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 font-bold text-slate-900">#{order.order_id}</td>
+                            <td className="px-6 py-4">
+                              <span className={`saas-badge ${order.status === "delivered" ? "saas-badge-success" : "saas-badge-info"}`}>
+                                {order.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">
+                                {order.payment_method || "N/A"}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right font-black text-slate-900">${order.total_amount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </section>
 
             {/* Cart Section */}

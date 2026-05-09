@@ -650,6 +650,7 @@ export default function AdminDashboardPage() {
                       <th className="px-6 py-5">Order</th>
                       <th className="px-6 py-5">Customer</th>
                       <th className="px-6 py-5">Status</th>
+                      <th className="px-6 py-5">Payment</th>
                       <th className="px-6 py-5 text-right">Total</th>
                       <th className="px-6 py-5 text-right">Actions</th>
                     </tr>
@@ -665,6 +666,11 @@ export default function AdminDashboardPage() {
                         <td className="px-6 py-4">
                           <span className={`saas-badge ${o.status === 'delivered' ? 'saas-badge-success' : 'saas-badge-info'}`}>
                             {o.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">
+                            {o.payment_method || 'N/A'}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right font-black text-slate-900">${o.total_amount}</td>
