@@ -18,16 +18,16 @@ INSERT INTO business_profile (company_name, address, contact_email, contact_phon
 
 -- Sample Orders
 -- Order 1: John Doe (customer_id 1)
-INSERT INTO orders (customer_id, total_amount, discount_applied, status) VALUES
-(1, 85.00, 0, 'delivered');
+INSERT INTO orders (customer_id, total_amount, discount_applied, status, payment_method) VALUES
+(1, 85.00, 0, 'delivered', 'cod');
 
 -- Order 2: Jane Smith (customer_id 2)
-INSERT INTO orders (customer_id, total_amount, discount_applied, status) VALUES
-(2, 45.00, 0, 'processing');
+INSERT INTO orders (customer_id, total_amount, discount_applied, status, payment_method) VALUES
+(2, 45.00, 0, 'processing', 'gcash');
 
 -- Order 3: John Doe (customer_id 1) - with a review/comment
-INSERT INTO orders (customer_id, total_amount, discount_applied, status) VALUES
-(1, 150.00, 0, 'delivered');
+INSERT INTO orders (customer_id, total_amount, discount_applied, status, payment_method) VALUES
+(1, 150.00, 0, 'delivered', 'card');
 
 -- Sample Order Items
 -- Items for Order 1
@@ -65,17 +65,17 @@ INSERT INTO customers (full_name, email, password, contact_number, address) VALU
 ('Karen Smith', 'karen@example.com', 'pass123', '555-0110', '110 Juniper Blvd, Phoenix, AZ');
 
 -- Orders for the 10 new customers (IDs 4 to 13)
-INSERT INTO orders (customer_id, total_amount, discount_applied, status) VALUES
-(4, 25.00, 0, 'delivered'),
-(5, 60.00, 0, 'delivered'),
-(6, 150.00, 0, 'delivered'),
-(7, 45.00, 0, 'delivered'),
-(8, 85.00, 0, 'delivered'),
-(9, 75.00, 10, 'delivered'),
-(10, 105.00, 0, 'delivered'),
-(11, 110.00, 0, 'delivered'),
-(12, 85.00, 0, 'delivered'),
-(13, 25.00, 0, 'delivered');
+INSERT INTO orders (customer_id, total_amount, discount_applied, status, payment_method) VALUES
+(4, 25.00, 0, 'delivered', 'paypal'),
+(5, 60.00, 0, 'delivered', 'maya'),
+(6, 150.00, 0, 'delivered', 'gotyme'),
+(7, 45.00, 0, 'delivered', 'cod'),
+(8, 85.00, 0, 'delivered', 'gcash'),
+(9, 75.00, 10, 'delivered', 'card'),
+(10, 105.00, 0, 'delivered', 'paypal'),
+(11, 110.00, 0, 'delivered', 'maya'),
+(12, 85.00, 0, 'delivered', 'gotyme'),
+(13, 25.00, 0, 'delivered', 'cod');
 
 -- Order Items with Reviews for the new orders (Order IDs 4 to 13)
 INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, cost_price_at_purchase, rating, comments) VALUES
@@ -105,21 +105,21 @@ INSERT INTO products (product_name, sku, category, size, price, cost_price, stoc
 
 -- Orders for some of the new products
 -- Customer 4 (Alice) buys a Summer Dress
-INSERT INTO orders (customer_id, total_amount, discount_applied, status) VALUES
-(4, 65.00, 0, 'delivered');
+INSERT INTO orders (customer_id, total_amount, discount_applied, status, payment_method) VALUES
+(4, 65.00, 0, 'delivered', 'gcash');
 INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, cost_price_at_purchase, rating, comments) VALUES
 (14, 7, 1, 65.00, 30.00, 5, 'Beautiful pattern, fits perfectly!');
 
 -- Customer 5 (Charlie) buys Cargo Pants and a Baseball Cap
-INSERT INTO orders (customer_id, total_amount, discount_applied, status) VALUES
-(5, 70.00, 0, 'delivered');
+INSERT INTO orders (customer_id, total_amount, discount_applied, status, payment_method) VALUES
+(5, 70.00, 0, 'delivered', 'card');
 INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, cost_price_at_purchase, rating, comments) VALUES
 (15, 11, 1, 50.00, 22.00, 5, 'Very durable for work.'),
 (15, 8, 1, 20.00, 8.00, 4, 'Simple and clean design.');
 
 -- Customer 6 (David) buys Canvas Sneakers and a Silk Necktie
-INSERT INTO orders (customer_id, total_amount, discount_applied, status) VALUES
-(6, 75.00, 0, 'delivered');
+INSERT INTO orders (customer_id, total_amount, discount_applied, status, payment_method) VALUES
+(6, 75.00, 0, 'delivered', 'paypal');
 INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase, cost_price_at_purchase, rating, comments) VALUES
 (16, 9, 1, 45.00, 20.00, 4, 'Great everyday shoes.'),
 (16, 13, 1, 30.00, 12.00, 3, 'Color is slightly different than expected.');
