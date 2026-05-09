@@ -24,6 +24,7 @@ type OrderDetails = {
   order_date: string;
   total_amount: number;
   status: string;
+  payment_method?: string;
   full_name: string;
   email: string;
   items: OrderItem[];
@@ -262,10 +263,27 @@ export default function OrderDetailsPage() {
             {/* Customer & Shipping Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <section className="saas-card p-6">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Billing Information</h3>
-                <div className="space-y-2">
-                  <p className="text-sm font-bold text-slate-900">{order.full_name}</p>
-                  <p className="text-sm text-slate-600">{order.email}</p>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Billing & Payment</h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Customer</p>
+                    <p className="text-sm font-bold text-slate-900">{order.full_name}</p>
+                    <p className="text-sm text-slate-600">{order.email}</p>
+                  </div>
+                  {order.payment_method && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Payment Method</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">
+                          {order.payment_method === 'cod' ? '💵' : 
+                           ['gcash', 'paypal', 'maya', 'gotyme'].includes(order.payment_method) ? '📱' : '💳'}
+                        </span>
+                        <p className="text-sm font-bold text-slate-900 capitalize">
+                          {order.payment_method.replace('-', ' ')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
               <section className="saas-card p-6">

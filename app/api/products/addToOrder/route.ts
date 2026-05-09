@@ -6,10 +6,14 @@ export async function POST(request: Request) {
   const connection = await database.getConnection();
 
   try {
-    const { customer_id } = await request.json();
+    const { customer_id, payment_method } = await request.json();
 
     if (!customer_id) {
       return NextResponse.json({ error: "customer_id is required." }, { status: 400 });
+    }
+
+    if (!payment_method) {
+      return NextResponse.json({ error: "payment_method is required." }, { status: 400 });
     }
 
     // 1. Start the transaction
@@ -45,9 +49,9 @@ export async function POST(request: Request) {
     // 4. Create the main Order record
     // Assuming 'PENDING' is one of the ENUM values for your status column
     const [orderResult]: any = await connection.query(
-      `INSERT INTO orders (customer_id, order_date, total_amount, discount_applied, status) 
-       VALUES (?, NOW(), ?, 0.00, 'PENDING')`,
-      [customer_id, totalAmount]
+      `INSERT INTO orders (customer_id, order_date, total_amount, discount_applied, status, payment_method) 
+       VALUES (?, NOW(), ?, 0.00, 'PENDING', ?)`,
+      [customer_id, totalAmount, payment_method]
     );
     const orderId = orderResult.insertId;
 

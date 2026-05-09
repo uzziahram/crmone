@@ -44,6 +44,7 @@ type Order = {
   order_id: number;
   customer_id: number;
   status: string;
+  payment_method?: string;
   total_amount: number;
   full_name: string;
   email: string;
@@ -317,6 +318,11 @@ export default function AdminDashboardPage() {
                         <td className="px-6 py-4">
                           <span className={`saas-badge ${order.status === 'delivered' ? 'saas-badge-success' : 'saas-badge-info'}`}>
                             {order.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            {order.payment_method || 'N/A'}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right font-bold">${order.total_amount}</td>

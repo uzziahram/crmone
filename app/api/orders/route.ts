@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
         o.total_amount,
         o.discount_applied,
         o.status,
+        o.payment_method,
         c.full_name,
         c.email
       FROM orders o

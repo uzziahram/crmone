@@ -9,6 +9,7 @@ export interface Order {
   total_amount: number;
   discount_applied: number;
   status: OrderStatus;
+  payment_method: string;
   // Relations
   items?: OrderItem[];
 }

@@ -33,8 +33,18 @@ export default function CustomerCartPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoadingItemId, setActionLoadingItemId] = useState<number | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  const paymentOptions = [
+    { id: "cod", label: "Cash on Delivery", icon: "💵", description: "Pay when you receive the items" },
+    { id: "gcash", label: "GCash", icon: "🔵", group: "E-wallet" },
+    { id: "paypal", label: "PayPal", icon: "🅿️", group: "E-wallet" },
+    { id: "maya", label: "Maya", icon: "🟢", group: "E-wallet" },
+    { id: "gotyme", label: "GoTyme", icon: "🟡", group: "E-wallet" },
+    { id: "card", label: "Debit or Credit Card", icon: "💳", description: "Visa, Mastercard, etc." },
+  ];
 
   async function loadCart() {
     setLoading(true);
@@ -102,13 +112,20 @@ export default function CustomerCartPage() {
 
   async function handleCheckout() {
     if (!customer?.customer_id) return;
+    if (!paymentMethod) {
+      setError("Please select a payment method.");
+      return;
+    }
     
     setIsCheckingOut(true);
     setError("");
     try {
       await apiRequest("/api/products/addToOrder", {
         method: "POST",
-        body: JSON.stringify({ customer_id: customer.customer_id }),
+        body: JSON.stringify({ 
+          customer_id: customer.customer_id,
+          payment_method: paymentMethod
+        }),
       });
       
       setSuccessMessage("Order placed successfully! Redirecting...");
@@ -240,7 +257,43 @@ export default function CustomerCartPage() {
         </div>
 
         {/* Order Summary Sidebar */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
+          <div className="saas-card p-8">
+            <h3 className="text-lg font-bold text-slate-900 mb-6">Payment Method</h3>
+            <div className="space-y-3">
+              {paymentOptions.map((opt) => (
+                <label 
+                  key={opt.id}
+                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                    paymentMethod === opt.id 
+                      ? "border-indigo-600 bg-indigo-50/50" 
+                      : "border-slate-100 hover:border-slate-200"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value={opt.id}
+                    checked={paymentMethod === opt.id}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="hidden"
+                  />
+                  <span className="text-2xl">{opt.icon}</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-slate-900">{opt.label}</p>
+                    {opt.group && <p className="text-[10px] font-bold text-indigo-500 uppercase">{opt.group}</p>}
+                    {opt.description && <p className="text-[10px] text-slate-500">{opt.description}</p>}
+                  </div>
+                  <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                    paymentMethod === opt.id ? "border-indigo-600" : "border-slate-200"
+                  }`}>
+                    {paymentMethod === opt.id && <div className="h-2.5 w-2.5 rounded-full bg-indigo-600" />}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="saas-card p-8 sticky top-24">
             <h3 className="text-lg font-bold text-slate-900 mb-6">Order Summary</h3>
             
@@ -265,10 +318,10 @@ export default function CustomerCartPage() {
 
             <button 
               onClick={handleCheckout}
-              disabled={!customer?.cart_items?.length || isCheckingOut}
-              className="saas-button-primary w-full py-3 text-base shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+              disabled={!customer?.cart_items?.length || isCheckingOut || !paymentMethod}
+              className="saas-button-primary w-full py-3 text-base shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {isCheckingOut ? "Processing..." : "Proceed to Checkout"}
+              {isCheckingOut ? "Processing..." : "Place Order"}
             </button>
             
             <Link 

@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS orders (
     total_amount DECIMAL(10, 2) NOT NULL,
     discount_applied DECIMAL(10, 2) DEFAULT 0,
     status ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
+    payment_method VARCHAR(50),
     FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
 );
 
