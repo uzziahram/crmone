@@ -1,4 +1,5 @@
-import Order from "./Order"
+import { Order } from "./Order";
+import { InCart } from "./InCart";
 
 export interface Customer {
   customer_id: number;
@@ -7,6 +8,8 @@ export interface Customer {
   password: string;
   contact_number?: string;
   address?: string;
-  created_at: Date | string; 
-  orders: Order[]
+  created_at: Date;
+  // Relations
+  orders?: Order[];
+  cart_items?: InCart[];
 }

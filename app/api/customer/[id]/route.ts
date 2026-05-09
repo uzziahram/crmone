@@ -1,123 +1,75 @@
-import { NextRequest, NextResponse } from "next/server";
-import database from "@/lib/database/db"; // Update with your actual db connection path
-import { Customer } from "@/types/Customer"; // Update with your interface paths
-import Order from "@/types/Order";
-import { OrderItem } from "@/types/Order_item";
-import { Product } from "@/types/Product";
-import { RowDataPacket } from "mysql2";
+import { NextResponse } from "next/server";
+import database from "@/lib/database/db"; 
+import { Customer } from "@/types/Customer";
+import { Order } from "@/types/Order";
+import { InCart } from "@/types/InCart";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { customer_id: string } }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const customerId = parseInt(params.customer_id, 10);
-
-  if (isNaN(customerId)) {
-    return NextResponse.json({ error: "Invalid customer ID" }, { status: 400 });
-  }
+  // Await the params Promise to get the id
+  const { id: customerId } = await params;
 
   try {
-    // 1. Fetch the Customer
-    const [customerRows] = await database.query<RowDataPacket[]>(
-      "SELECT * FROM customers WHERE customer_id = ?",
-      [customerId]
-    );
+    // 1. Fetch Basic Customer Info (Omit password for security)
+    const customerQuery = `
+      SELECT customer_id, full_name, email, contact_number, address, created_at 
+      FROM customers WHERE customer_id = ?
+    `;
+    
+    // 2. Fetch Orders
+    const ordersQuery = `SELECT * FROM orders WHERE customer_id = ?`;
 
-    if (customerRows.length === 0) {
+    // 3. Fetch Cart Items with Product details (using a JOIN)
+    const cartQuery = `
+      SELECT ic.*, p.product_name, p.price, p.sku
+      FROM in_cart ic
+      JOIN products p ON ic.product_id = p.product_id
+      WHERE ic.customer_id = ?
+    `;
+
+    // Execute all queries in parallel for better performance
+    const [
+      [customerRows],
+      [orderRows],
+      [cartRows]
+    ] = await Promise.all([
+      database.query(customerQuery, [customerId]),
+      database.query(ordersQuery, [customerId]),
+      database.query(cartQuery, [customerId])
+    ]);
+
+    const customerBase = (customerRows as any[])[0];
+
+    if (!customerBase) {
       return NextResponse.json({ error: "Customer not found" }, { status: 404 });
     }
 
-    const customerData = customerRows[0];
-
-    // 2. Fetch the Customer's Orders
-    const [orderRows] = await database.query<RowDataPacket[]>(
-      "SELECT * FROM orders WHERE customer_id = ?",
-      [customerId]
-    );
-
-    let ordersWithItems: Order[] = [];
-
-    // 3. Fetch Order Items and JOIN with Products (if there are orders)
-    if (orderRows.length > 0) {
-      const orderIds = orderRows.map((o) => o.order_id);
-      const placeholders = orderIds.map(() => "?").join(",");
-
-      const [itemRows] = await database.query<RowDataPacket[]>(
-        `
-        SELECT 
-          oi.*, 
-          p.product_name, p.sku, p.category, p.size, p.price, 
-          p.stock_quantity, p.low_stock_alert, p.created_at AS product_created_at
-        FROM order_items oi
-        LEFT JOIN products p ON oi.product_id = p.product_id
-        WHERE oi.order_id IN (${placeholders})
-        `,
-        orderIds
-      );
-
-      // Assemble the nested order array
-      ordersWithItems = orderRows.map((orderRow) => {
-        const itemsForOrder = itemRows.filter((item) => item.order_id === orderRow.order_id);
-
-        const formattedItems: OrderItem[] = itemsForOrder.map((item) => {
-          // Construct the optional Product object
-          let product: Product | undefined = undefined;
-          
-          if (item.product_name) {
-            product = {
-              product_id: item.product_id,
-              product_name: item.product_name,
-              sku: item.sku,
-              category: item.category,
-              size: item.size,
-              price: item.price,
-              stock_quantity: item.stock_quantity,
-              low_stock_alert: item.low_stock_alert,
-              created_at: item.product_created_at,
-            };
-          }
-
-          return {
-            order_item_id: item.order_item_id,
-            order_id: item.order_id,
-            product_id: item.product_id,
-            quantity: item.quantity,
-            price_at_purchase: item.price_at_purchase,
-            rating: item.rating,
-            comments: item.comments,
-            product: product,
-          };
-        });
-
-        return {
-          order_id: orderRow.order_id,
-          customer_id: orderRow.customer_id,
-          order_date: orderRow.order_date,
-          total_amount: orderRow.total_amount,
-          discount_applied: orderRow.discount_applied,
-          status: orderRow.status,
-          items: formattedItems,
-        };
-      });
-    }
-
-    // 4. Assemble the final Customer object matching the interface
-    const customer: Customer = {
-      customer_id: customerData.customer_id,
-      full_name: customerData.full_name,
-      email: customerData.email,
-      // Map 'password_hash' from the database to the 'password' interface property
-      password: customerData.password_hash, 
-      contact_number: customerData.contact_number,
-      address: customerData.address,
-      created_at: customerData.created_at,
-      orders: ordersWithItems,
+    // 4. Combine data into the Customer interface structure
+    const fullCustomer: Customer = {
+      ...customerBase,
+      orders: orderRows as Order[],
+      cart_items: (cartRows as any[]).map(row => ({
+        cart_item_id: row.cart_item_id,
+        customer_id: row.customer_id,
+        product_id: row.product_id,
+        quantity: row.quantity,
+        added_at: row.added_at,
+        product: {
+          product_id: row.product_id,
+          product_name: row.product_name,
+          price: row.price,
+          sku: row.sku
+          // Add other product fields as needed
+        }
+      }))
     };
 
-    return NextResponse.json(customer, { status: 200 });
-
+    return NextResponse.json(fullCustomer, { status: 200 });
+    
   } catch (error) {
-    console.error("Database query error:", error);
+    console.error("Failed to fetch full customer profile:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

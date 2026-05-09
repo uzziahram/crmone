@@ -29,12 +29,13 @@ export async function POST(request: Request) {
       category,
       size,
       price,
+      cost_price,
       stock_quantity,
       low_stock_alert,
     } = body;
 
     // Basic validation
-    if (!product_name || !sku || price === undefined || stock_quantity === undefined) {
+    if (!product_name || !sku || price === undefined || cost_price === undefined || stock_quantity === undefined) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -43,8 +44,8 @@ export async function POST(request: Request) {
 
     const query = `
       INSERT INTO products 
-      (product_name, sku, category, size, price, stock_quantity, low_stock_alert) 
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (product_name, sku, category, size, price, cost_price, stock_quantity, low_stock_alert) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
     const values = [
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       category || null,
       size || null,
       price,
+      cost_price || 0,
       stock_quantity,
       low_stock_alert || 0,
     ];
@@ -66,11 +68,15 @@ export async function POST(request: Request) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating product:", error);
+    const errorMessage = error?.code === 'ER_DUP_ENTRY' 
+      ? "Product with this SKU already exists." 
+      : "Failed to create product";
+    
     return NextResponse.json(
-      { error: "Failed to create product" },
-      { status: 500 }
+      { error: errorMessage, details: error?.message },
+      { status: error?.code === 'ER_DUP_ENTRY' ? 409 : 500 }
     );
   }
 }

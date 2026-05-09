@@ -11,7 +11,7 @@ export async function POST(req: NextRequest ) {
     const { email , password } = await req.json()
 
     const [rows] = await database.execute<RowDataPacket[]>(
-      "SELECT * FROM members WHERE email = ?",
+      "SELECT * FROM customers WHERE email = ?",
       [email]
     )
 
@@ -41,6 +41,12 @@ export async function POST(req: NextRequest ) {
       secure: false,    // true in production (HTTPS)
       path: "/",
       maxAge: 60 * 60 * 24, // 1 day
+    })
+    response.cookies.set("role", "customer", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24,
     })
 
     return response;

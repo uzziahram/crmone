@@ -1,11 +1,14 @@
-import { OrderItem } from "./Order_item";
-// Interface for the 'orders' table
-export default interface Order {
+import { OrderItem } from "./OrderItem";
+
+export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
+export interface Order {
   order_id: number;
   customer_id: number;
   order_date: Date;
   total_amount: number;
   discount_applied: number;
-  status: 'pending' | 'shipped' | 'delivered' | 'cancelled'; // Based on ENUM(...)
-  items: OrderItem[];
+  status: OrderStatus;
+  // Relations
+  items?: OrderItem[];
 }

@@ -1,25 +1,21 @@
 import { NextResponse } from "next/server";
-import database from "@/lib/database/db"; // Adjust this import path to where your db file is located
+import database from "@/lib/database/db"; 
+import { Customer } from "@/types/Customer"; // Adjust path to where your interfaces are saved
 
 export async function GET() {
   try {
-    // We specify the columns to avoid sending the 'password' field to the client
+    // We omit sensitive or relational fields that aren't part of this specific SELECT query
+    type CustomerResponse = Omit<Customer, 'password' | 'orders' | 'cart_items'>;
+
     const query = `
-      SELECT 
-        customer_id, 
-        full_name, 
-        email, 
-        contact_number, 
-        address, 
-        created_at 
-      FROM customers
+      SELECT * FROM customers
     `;
     
-    // Execute the query
-    const [customers] = await database.query(query);
+    // Execute the query and cast the result to our interface type
+    const [rows] = await database.query(query);
+    const customers = rows as CustomerResponse[];
 
-    // Return the results as JSON
-    return NextResponse.json(customers , { status: 200 });
+    return NextResponse.json(customers, { status: 200 });
     
   } catch (error) {
     console.error("Failed to fetch customers:", error);
