@@ -15,6 +15,7 @@ type CartItem = {
     product_name: string;
     price: number;
     sku: string;
+    image_url?: string;
   };
 };
 
@@ -130,7 +131,6 @@ export default function CustomerCartPage() {
     [customer]
   );
 
-  // Prevent hydration mismatch by only rendering client-specific parts after mounting
   if (!mounted) {
     return <AppShell title="Your Shopping Cart"><div className="animate-pulse saas-card p-12 text-center text-slate-400">Loading your cart...</div></AppShell>;
   }
@@ -166,52 +166,71 @@ export default function CustomerCartPage() {
             <div className="saas-card overflow-hidden">
               <div className="divide-y divide-slate-100">
                 {customer.cart_items?.map((item) => (
-                  <div key={item.cart_item_id} className="p-6 flex items-start justify-between gap-6 hover:bg-slate-50/50 transition-colors">
-                    <div className="flex-1">
+                  <div key={item.cart_item_id} className="p-6 flex items-start gap-6 hover:bg-slate-50/50 transition-colors">
+                    <div className="h-24 w-24 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-100">
+                      {item.product?.image_url ? (
+                        <img 
+                          src={item.product.image_url} 
+                          alt={item.product.product_name} 
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-slate-200 text-3xl">👕</div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">
                         {item.product?.sku}
                       </p>
-                      <h3 className="text-lg font-bold text-slate-900 mb-1">
+                      <h3 className="text-lg font-bold text-slate-900 mb-1 truncate">
                         {item.product?.product_name || `Product ${item.product_id}`}
                       </h3>
-                      <p className="text-slate-500 text-sm">
+                      <p className="text-slate-500 text-sm mb-4">
                         ${item.product?.price ?? 0} per unit
                       </p>
+
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase">Qty</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={qtyByItem[item.cart_item_id] ?? item.quantity}
+                            onChange={(e) =>
+                              setQtyByItem((prev) => ({
+                                ...prev,
+                                [item.cart_item_id]: Math.max(1, Number(e.target.value)),
+                              }))
+                            }
+                            className="saas-input w-20 py-1 text-center font-bold"
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => void updateCartItem(item.cart_item_id)}
+                            disabled={actionLoadingItemId === item.cart_item_id || qtyByItem[item.cart_item_id] === item.quantity}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 disabled:opacity-30 transition-colors"
+                          >
+                            Update
+                          </button>
+                          <span className="text-slate-200">|</span>
+                          <button
+                            onClick={() => void deleteCartItem(item.cart_item_id)}
+                            disabled={actionLoadingItemId === item.cart_item_id}
+                            className="text-xs font-bold text-rose-600 hover:text-rose-700 disabled:opacity-30 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
                     </div>
                     
-                    <div className="flex flex-col items-end gap-3">
-                      <div className="flex items-center gap-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">Qty</label>
-                        <input
-                          type="number"
-                          min={1}
-                          value={qtyByItem[item.cart_item_id] ?? item.quantity}
-                          onChange={(e) =>
-                            setQtyByItem((prev) => ({
-                              ...prev,
-                              [item.cart_item_id]: Math.max(1, Number(e.target.value)),
-                            }))
-                          }
-                          className="saas-input w-20 py-1"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => void updateCartItem(item.cart_item_id)}
-                          disabled={actionLoadingItemId === item.cart_item_id || qtyByItem[item.cart_item_id] === item.quantity}
-                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          Update
-                        </button>
-                        <span className="text-slate-200">|</span>
-                        <button
-                          onClick={() => void deleteCartItem(item.cart_item_id)}
-                          disabled={actionLoadingItemId === item.cart_item_id}
-                          className="text-xs font-bold text-rose-600 hover:text-rose-700 disabled:opacity-30"
-                        >
-                          Remove
-                        </button>
-                      </div>
+                    <div className="text-right hidden sm:block">
+                      <p className="text-sm text-slate-400 mb-1">Subtotal</p>
+                      <p className="text-lg font-black text-slate-900">
+                        ${((item.product?.price ?? 0) * (qtyByItem[item.cart_item_id] ?? item.quantity)).toFixed(2)}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -228,7 +247,7 @@ export default function CustomerCartPage() {
             <div className="space-y-4 mb-8">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Subtotal</span>
-                <span className="font-medium text-slate-900">${total}</span>
+                <span className="font-medium text-slate-900">${total.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Shipping</span>
@@ -240,7 +259,7 @@ export default function CustomerCartPage() {
               </div>
               <div className="pt-4 border-t border-slate-100 flex justify-between">
                 <span className="text-base font-bold text-slate-900">Total</span>
-                <span className="text-xl font-black text-indigo-600">${total}</span>
+                <span className="text-xl font-black text-indigo-600">${total.toFixed(2)}</span>
               </div>
             </div>
 
@@ -249,17 +268,7 @@ export default function CustomerCartPage() {
               disabled={!customer?.cart_items?.length || isCheckingOut}
               className="saas-button-primary w-full py-3 text-base shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
             >
-              {isCheckingOut ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </>
-              ) : (
-                "Proceed to Checkout"
-              )}
+              {isCheckingOut ? "Processing..." : "Proceed to Checkout"}
             </button>
             
             <Link 
@@ -268,37 +277,19 @@ export default function CustomerCartPage() {
             >
               Continue Shopping
             </Link>
-
-            <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-100">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Billing for</p>
-              <p className="text-sm font-bold text-slate-900">{customer?.full_name}</p>
-              <p className="text-xs text-slate-500 truncate">{customer?.customer_id ? `Member ID: #${customer.customer_id}` : ""}</p>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Notifications */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none">
         {successMessage && (
           <div className="pointer-events-auto saas-card bg-indigo-600 text-white border-none p-4 shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
-            <svg className="h-5 w-5 text-indigo-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
             <p className="text-sm font-medium">{successMessage}</p>
           </div>
         )}
         {error && (
           <div className="pointer-events-auto saas-card bg-rose-600 text-white border-none p-4 shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
-            <svg className="h-5 w-5 text-rose-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
             <p className="text-sm font-medium">{error}</p>
-            <button onClick={() => setError("")} className="ml-2 text-rose-200 hover:text-white transition-colors">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         )}
       </div>

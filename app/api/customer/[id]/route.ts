@@ -23,7 +23,7 @@ export async function GET(
 
     // 3. Fetch Cart Items with Product details (using a JOIN)
     const cartQuery = `
-      SELECT ic.*, p.product_name, p.price, p.sku
+      SELECT ic.*, p.product_name, p.price, p.sku, p.image_url
       FROM in_cart ic
       JOIN products p ON ic.product_id = p.product_id
       WHERE ic.customer_id = ?
@@ -60,7 +60,8 @@ export async function GET(
           product_id: row.product_id,
           product_name: row.product_name,
           price: row.price,
-          sku: row.sku
+          sku: row.sku,
+          image_url: row.image_url
           // Add other product fields as needed
         }
       }))

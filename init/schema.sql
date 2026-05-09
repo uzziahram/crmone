@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS products (
     cost_price DECIMAL(10, 2) DEFAULT 0,
     stock_quantity INT DEFAULT 0,
     low_stock_alert INT DEFAULT 0,
+    image_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
