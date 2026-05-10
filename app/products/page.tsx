@@ -57,16 +57,7 @@ export default function ProductsPage() {
     try {
       await apiRequest<{ message: string }>("/api/products", {
         method: "POST",
-        body: JSON.stringify({
-          product_name: String(formData.get("product_name") ?? ""),
-          sku: String(formData.get("sku") ?? ""),
-          category: String(formData.get("category") ?? ""),
-          size: String(formData.get("size") ?? ""),
-          price: Number(formData.get("price") ?? 0),
-          stock_quantity: Number(formData.get("stock_quantity") ?? 0),
-          low_stock_alert: Number(formData.get("low_stock_alert") ?? 0),
-          image_url: String(formData.get("image_url") ?? ""),
-        }),
+        body: formData,
       });
       event.currentTarget.reset();
       setStatus("Product created successfully.");
@@ -189,8 +180,8 @@ export default function ProductsPage() {
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Image URL</label>
-                <input name="image_url" placeholder="/productImages/item.jpg" className="saas-input" />
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Product Photo</label>
+                <input name="image" type="file" accept="image/*" className="saas-input py-1.5 text-[10px]" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -224,7 +215,7 @@ export default function ProductsPage() {
           {loading ? (
             <div className="grid gap-6 md:grid-cols-2">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="saas-card aspect-[3/4] animate-pulse bg-slate-50/50" />
+                <div key={i} className="saas-card aspect-3/4 animate-pulse bg-slate-50/50" />
               ))}
             </div>
           ) : (
@@ -232,7 +223,7 @@ export default function ProductsPage() {
               {products.map((product) => (
                 <article key={product.product_id} className="saas-card flex flex-col group overflow-hidden">
                   {/* Portrait Image Container */}
-                  <div className="relative aspect-[3/4] w-full bg-slate-50 overflow-hidden">
+                  <div className="relative aspect-3/4 w-full bg-slate-50 overflow-hidden">
                     {product.image_url ? (
                       <img 
                         src={product.image_url} 

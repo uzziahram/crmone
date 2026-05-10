@@ -209,16 +209,7 @@ export default function AdminDashboardPage() {
     try {
       await apiRequest("/api/products", {
         method: "POST",
-        body: JSON.stringify({
-          product_name: String(formData.get("product_name")),
-          sku: String(formData.get("sku")),
-          category: String(formData.get("category")),
-          size: String(formData.get("size") || ""),
-          price: Number(formData.get("price")),
-          cost_price: Number(formData.get("cost_price")),
-          stock_quantity: Number(formData.get("stock_quantity")),
-          low_stock_alert: Number(formData.get("low_stock_alert") || 5),
-        }),
+        body: formData,
       });
       created = true;
       event.currentTarget.reset();
@@ -412,6 +403,10 @@ export default function AdminDashboardPage() {
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase">Low Stock Alert</label>
                 <input name="low_stock_alert" type="number" className="saas-input" placeholder="5" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Product Photo</label>
+                <input name="image" type="file" accept="image/*" className="saas-input py-1.5 text-[10px]" />
               </div>
               <div className="flex items-end sm:col-span-2 lg:col-span-1">
                 <button type="submit" className="saas-button-primary w-full py-2">Create Product</button>

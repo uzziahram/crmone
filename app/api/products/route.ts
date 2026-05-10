@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import database from "@/lib/database/db";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
-import { Product } from "@/types/Product";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 
 // GET: Fetch all products
 export async function GET() {
@@ -19,33 +20,59 @@ export async function GET() {
   }
 }
 
-// POST: Create a new product
+// POST: Create a new product with image upload
 export async function POST(request: Request) {
   try {
-    const body: Product = await request.json();
-    const {
-      product_name,
-      sku,
-      category,
-      size,
-      price,
-      cost_price,
-      stock_quantity,
-      low_stock_alert,
-    } = body;
+    const formData = await request.formData();
+    
+    const product_name = formData.get("product_name") as string;
+    const sku = formData.get("sku") as string;
+    const category = formData.get("category") as string;
+    const size = formData.get("size") as string;
+    const price = Number(formData.get("price"));
+    const cost_price = Number(formData.get("cost_price"));
+    const stock_quantity = Number(formData.get("stock_quantity"));
+    const low_stock_alert = Number(formData.get("low_stock_alert"));
+    const imageFile = formData.get("image") as File | null;
 
     // Basic validation
-    if (!product_name || !sku || price === undefined || cost_price === undefined || stock_quantity === undefined) {
+    if (!product_name || !sku || isNaN(price) || isNaN(cost_price) || isNaN(stock_quantity)) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing or invalid required fields" },
         { status: 400 }
       );
     }
 
+    let image_url = null;
+
+    // Handle image upload if provided
+    if (imageFile && imageFile.size > 0) {
+      const bytes = await imageFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      // Get extension from original filename
+      const originalName = imageFile.name;
+      const extension = path.extname(originalName);
+      
+      // Filename is product name + extension
+      const fileName = `${product_name}${extension}`;
+      const uploadDir = path.join(process.cwd(), "public", "productImages");
+      const filePath = path.join(uploadDir, fileName);
+
+      try {
+        await mkdir(uploadDir, { recursive: true });
+        await writeFile(filePath, buffer);
+        image_url = `/productImages/${fileName}`;
+      } catch (fsError) {
+        console.error("Failed to save image file:", fsError);
+        // Continue without image if saving fails
+      }
+    }
+
     const query = `
       INSERT INTO products 
-      (product_name, sku, category, size, price, cost_price, stock_quantity, low_stock_alert) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (product_name, sku, category, size, price, cost_price, stock_quantity, low_stock_alert, image_url) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
     const values = [
@@ -57,6 +84,7 @@ export async function POST(request: Request) {
       cost_price || 0,
       stock_quantity,
       low_stock_alert || 0,
+      image_url
     ];
 
     const [result] = await database.execute<ResultSetHeader>(query, values);
@@ -64,7 +92,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { 
         message: "Product created successfully", 
-        product_id: result.insertId 
+        product_id: result.insertId,
+        image_url
       },
       { status: 201 }
     );

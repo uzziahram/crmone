@@ -4,12 +4,19 @@ export async function apiRequest<TResponse>(
   path: string,
   options?: RequestInit
 ): Promise<TResponse> {
+  const isFormData = options?.body instanceof FormData;
+  
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string> ?? {}),
+  };
+
+  if (!isFormData && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const response = await fetch(path, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers ?? {}),
-    },
+    headers,
   });
 
   const payload = await response.json().catch(() => ({}));
