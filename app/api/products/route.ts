@@ -52,10 +52,15 @@ export async function POST(request: Request) {
 
       // Get extension from original filename
       const originalName = imageFile.name;
-      const extension = path.extname(originalName);
+      const extension = path.extname(originalName).toLowerCase();
       
-      // Filename is product name + extension
-      const fileName = `${product_name}${extension}`;
+      // Sanitize filename: replace spaces with underscores, lowercase, remove non-alphanumeric
+      const sanitizedName = product_name
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "");
+      
+      const fileName = `${sanitizedName}${extension}`;
       const uploadDir = path.join(process.cwd(), "public", "productImages");
       const filePath = path.join(uploadDir, fileName);
 
@@ -65,7 +70,8 @@ export async function POST(request: Request) {
         image_url = `/productImages/${fileName}`;
       } catch (fsError) {
         console.error("Failed to save image file:", fsError);
-        // Continue without image if saving fails
+        // We throw so the catch block handles it and returns a 500
+        throw new Error("Failed to save product image on server.");
       }
     }
 
@@ -99,9 +105,14 @@ export async function POST(request: Request) {
     );
   } catch (error: any) {
     console.error("Error creating product:", error);
-    const errorMessage = error?.code === 'ER_DUP_ENTRY' 
-      ? "Product with this SKU already exists." 
-      : "Failed to create product";
+    
+    // Determine the error message
+    let errorMessage = "Failed to create product";
+    if (error?.code === 'ER_DUP_ENTRY') {
+      errorMessage = "Product with this SKU already exists.";
+    } else if (error.message === "Failed to save product image on server.") {
+      errorMessage = error.message;
+    }
     
     return NextResponse.json(
       { error: errorMessage, details: error?.message },

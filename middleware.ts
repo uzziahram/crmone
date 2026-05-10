@@ -14,7 +14,8 @@ export function middleware(req: NextRequest) {
   const isCustomerPath = pathname.startsWith("/customer");
   const isAdminApiPath =
     pathname.startsWith("/api/reviews") ||
-    pathname.match(/^\/api\/products\/[^/]+\/stock$/) !== null;
+    pathname.match(/^\/api\/products\/[^/]+\/stock$/) !== null ||
+    (pathname.match(/^\/api\/products\/[^/]+$/) !== null && req.method === "DELETE");
 
   if (isAdminPath || isAdminApiPath) {
     if (!token || role !== "admin") {
@@ -32,5 +33,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/customer/:path*", "/api/reviews", "/api/products/:path*/stock"],
+  matcher: ["/admin/:path*", "/customer/:path*", "/api/reviews", "/api/products/:path*"],
 };

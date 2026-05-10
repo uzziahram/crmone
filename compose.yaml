@@ -21,6 +21,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-supersecretkey123}
     ports:
       - 3000:3000
+    volumes:
+      - ./public/productImages:/usr/src/app/public/productImages
     depends_on:
       db:
         condition: service_healthy

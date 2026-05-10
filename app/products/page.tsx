@@ -7,6 +7,7 @@ import {
   getActiveCustomerId,
   setActiveCustomerId,
 } from "@/lib/active-customer";
+import { getRole } from "@/lib/session";
 
 type Product = {
   product_id: number;
@@ -29,6 +30,7 @@ export default function ProductsPage() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   async function loadProducts() {
     setLoading(true);
@@ -37,6 +39,7 @@ export default function ProductsPage() {
       const data = await apiRequest<Product[]>("/api/products");
       setProducts(data);
       setActiveCustomerState(getActiveCustomerId());
+      setIsAdmin(getRole() === "admin");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load");
     } finally {
@@ -120,6 +123,26 @@ export default function ProductsPage() {
       await loadProducts();
     } catch (orderError) {
       setError(orderError instanceof Error ? orderError.message : "Checkout failed");
+    }
+  }
+
+  async function deleteProduct(productId: number) {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+
+    setError("");
+    setStatus("");
+
+    try {
+      await apiRequest(`/api/products/${productId}`, {
+        method: "DELETE",
+      });
+      setStatus("Product deleted successfully.");
+      setTimeout(() => setStatus(""), 3000);
+      await loadProducts();
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error ? deleteError.message : "Failed to delete product"
+      );
     }
   }
 
@@ -258,13 +281,23 @@ export default function ProductsPage() {
                         <span className={`h-2 w-2 rounded-full ${product.stock_quantity > product.low_stock_alert ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
                         <span className="text-xs font-bold text-slate-500">{product.stock_quantity} available</span>
                       </div>
-                      <button
-                        onClick={() => void addToCart(product.product_id)}
-                        disabled={addingItemId === product.product_id || product.stock_quantity === 0}
-                        className="text-xs font-black text-indigo-600 hover:text-indigo-500 uppercase tracking-widest disabled:opacity-30"
-                      >
-                        {addingItemId === product.product_id ? "Adding..." : "Add to Cart"}
-                      </button>
+                      <div className="flex items-center gap-4">
+                        {isAdmin && (
+                          <button
+                            onClick={() => void deleteProduct(product.product_id)}
+                            className="text-xs font-black text-rose-600 hover:text-rose-500 uppercase tracking-widest"
+                          >
+                            Delete
+                          </button>
+                        )}
+                        <button
+                          onClick={() => void addToCart(product.product_id)}
+                          disabled={addingItemId === product.product_id || product.stock_quantity === 0}
+                          className="text-xs font-black text-indigo-600 hover:text-indigo-500 uppercase tracking-widest disabled:opacity-30"
+                        >
+                          {addingItemId === product.product_id ? "Adding..." : "Add to Cart"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </article>
