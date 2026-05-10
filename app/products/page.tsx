@@ -17,6 +17,7 @@ type Product = {
   price: number;
   stock_quantity: number;
   low_stock_alert: number;
+  image_url?: string;
 };
 
 export default function ProductsPage() {
@@ -64,6 +65,7 @@ export default function ProductsPage() {
           price: Number(formData.get("price") ?? 0),
           stock_quantity: Number(formData.get("stock_quantity") ?? 0),
           low_stock_alert: Number(formData.get("low_stock_alert") ?? 0),
+          image_url: String(formData.get("image_url") ?? ""),
         }),
       });
       event.currentTarget.reset();
@@ -186,6 +188,10 @@ export default function ProductsPage() {
                   <input name="category" placeholder="Electronics" className="saas-input" />
                 </div>
               </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Image URL</label>
+                <input name="image_url" placeholder="/productImages/item.jpg" className="saas-input" />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-500 uppercase">Price ($)</label>
@@ -218,15 +224,35 @@ export default function ProductsPage() {
           {loading ? (
             <div className="grid gap-6 md:grid-cols-2">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="saas-card p-6 h-40 animate-pulse bg-slate-50/50" />
+                <div key={i} className="saas-card aspect-[3/4] animate-pulse bg-slate-50/50" />
               ))}
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2">
               {products.map((product) => (
-                <article key={product.product_id} className="saas-card p-6 flex flex-col group">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
+                <article key={product.product_id} className="saas-card flex flex-col group overflow-hidden">
+                  {/* Portrait Image Container */}
+                  <div className="relative aspect-[3/4] w-full bg-slate-50 overflow-hidden">
+                    {product.image_url ? (
+                      <img 
+                        src={product.image_url} 
+                        alt={product.product_name} 
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-slate-200 text-6xl">
+                        👕
+                      </div>
+                    )}
+                    <div className="absolute top-4 right-4">
+                      <div className="text-xl font-black text-white bg-slate-900/80 px-3 py-1 rounded-lg backdrop-blur-sm">
+                        ${product.price}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 flex flex-col flex-1">
+                    <div className="mb-4">
                       <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block mb-1">
                         {product.category || "Uncategorized"}
                       </span>
@@ -235,23 +261,20 @@ export default function ProductsPage() {
                       </h4>
                       <p className="text-[10px] font-medium text-slate-400 uppercase">{product.sku}</p>
                     </div>
-                    <div className="text-xl font-black text-slate-900">
-                      ${product.price}
-                    </div>
-                  </div>
 
-                  <div className="mt-auto pt-6 flex items-center justify-between border-t border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${product.stock_quantity > product.low_stock_alert ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
-                      <span className="text-xs font-bold text-slate-500">{product.stock_quantity} available</span>
+                    <div className="mt-auto pt-6 flex items-center justify-between border-t border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${product.stock_quantity > product.low_stock_alert ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+                        <span className="text-xs font-bold text-slate-500">{product.stock_quantity} available</span>
+                      </div>
+                      <button
+                        onClick={() => void addToCart(product.product_id)}
+                        disabled={addingItemId === product.product_id || product.stock_quantity === 0}
+                        className="text-xs font-black text-indigo-600 hover:text-indigo-500 uppercase tracking-widest disabled:opacity-30"
+                      >
+                        {addingItemId === product.product_id ? "Adding..." : "Add to Cart"}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => void addToCart(product.product_id)}
-                      disabled={addingItemId === product.product_id || product.stock_quantity === 0}
-                      className="text-xs font-black text-indigo-600 hover:text-indigo-500 uppercase tracking-widest disabled:opacity-30"
-                    >
-                      {addingItemId === product.product_id ? "Adding..." : "Add to Cart"}
-                    </button>
                   </div>
                 </article>
               ))}

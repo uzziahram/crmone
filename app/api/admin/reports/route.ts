@@ -51,35 +51,55 @@ export async function GET(req: NextRequest) {
       LIMIT 5
     `;
 
-    // 4. Monthly Trend (last 6 months)
+    // 4. Monthly Trend (last 12 months)
     const trendQuery = `
       SELECT 
-        DATE_FORMAT(order_date, '%Y-%m') as month,
-        SUM(total_amount) as sales
-      FROM orders
-      WHERE status != 'cancelled'
+        DATE_FORMAT(o.order_date, '%Y-%m') as month,
+        SUM(oi.quantity * oi.price_at_purchase) as sales,
+        SUM(oi.quantity * oi.cost_price_at_purchase) as cost,
+        SUM(oi.quantity * (oi.price_at_purchase - oi.cost_price_at_purchase)) as profit
+      FROM order_items oi
+      JOIN orders o ON o.order_id = oi.order_id
+      WHERE o.status != 'cancelled'
       GROUP BY month
       ORDER BY month DESC
-      LIMIT 6
+      LIMIT 12
+    `;
+
+    // 5. Highest Rated Products
+    const highestRatedProductsQuery = `
+      SELECT 
+        p.product_name,
+        AVG(oi.rating) as avg_rating,
+        COUNT(oi.rating) as rating_count
+      FROM order_items oi
+      JOIN products p ON p.product_id = oi.product_id
+      WHERE oi.rating IS NOT NULL
+      GROUP BY p.product_id
+      ORDER BY avg_rating DESC, rating_count DESC
+      LIMIT 5
     `;
 
     const [
       [salesData],
       [ratingData],
       [topProducts],
-      [trendData]
+      [trendData],
+      [highestRatedData]
     ] = await Promise.all([
       database.query(salesQuery, values),
       database.query(ratingQuery),
       database.query(topProductsQuery, values),
-      database.query(trendQuery)
+      database.query(trendQuery),
+      database.query(highestRatedProductsQuery)
     ]);
 
     return NextResponse.json({
       summary: (salesData as any)[0],
       ratings: ratingData,
       topProducts: topProducts,
-      trends: trendData
+      trends: trendData,
+      highestRatedProducts: highestRatedData
     }, { status: 200 });
 
   } catch (error) {

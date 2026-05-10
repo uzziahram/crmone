@@ -38,6 +38,7 @@ type Product = {
   stock_quantity: number;
   low_stock_alert: number;
   category?: string;
+  image_url?: string;
 };
 
 type Order = {
@@ -59,6 +60,7 @@ type Order = {
 
 type Review = {
   order_item_id: number;
+  order_id: number;
   customer_name: string;
   product_name: string;
   rating?: number;
@@ -69,7 +71,8 @@ type ReportData = {
   summary: { total_sales: number; total_cost: number; total_profit: number };
   ratings: Array<{ rating: number; count: number }>;
   topProducts: Array<{ product_name: string; total_quantity: number; product_profit: number }>;
-  trends: Array<{ month: string; sales: number }>;
+  trends: Array<{ month: string; sales: number; cost: number; profit: number }>;
+  highestRatedProducts: Array<{ product_name: string; avg_rating: number; rating_count: number }>;
 };
 
 type BusinessProfile = {
@@ -102,6 +105,7 @@ export default function AdminDashboardPage() {
   const [inventorySearch, setInventorySearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
+  const [satisfactionSearch, setSatisfactionSearch] = useState("");
 
   async function loadAll() {
     setLoading(true);
@@ -144,6 +148,14 @@ export default function AdminDashboardPage() {
   const filteredOrders = useMemo(() => 
     orders.filter(o => o.full_name.toLowerCase().includes(orderSearch.toLowerCase()) || o.order_id.toString().includes(orderSearch)),
   [orders, orderSearch]);
+
+  const filteredReviews = useMemo(() =>
+    reviews.filter(r => 
+      r.customer_name.toLowerCase().includes(satisfactionSearch.toLowerCase()) || 
+      r.product_name.toLowerCase().includes(satisfactionSearch.toLowerCase()) ||
+      (r.comments || "").toLowerCase().includes(satisfactionSearch.toLowerCase())
+    ),
+  [reviews, satisfactionSearch]);
 
   async function viewCustomerProfile(customerId: number) {
     setLoadingCustomer(true);
@@ -243,9 +255,16 @@ export default function AdminDashboardPage() {
     { id: "overview", label: "Overview", icon: "📊" },
     { id: "inventory", label: "Inventory", icon: "📦" },
     { id: "customers", label: "Customers", icon: "👥" },
+    { id: "satisfaction", label: "Satisfaction", icon: "⭐" },
     { id: "reports", label: "Reports & Profit", icon: "📈" },
     { id: "settings", label: "Settings", icon: "⚙️" },
   ];
+
+  const averageRating = useMemo(() => {
+    if (!reviews.length) return 0;
+    const sum = reviews.reduce((acc, r) => acc + (r.rating || 0), 0);
+    return (sum / reviews.length).toFixed(1);
+  }, [reviews]);
 
   return (
     <AppShell title={profile?.company_name || "Admin Portal"}>
@@ -416,35 +435,55 @@ export default function AdminDashboardPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.map((product) => (
-              <div key={product.product_id} className="saas-card p-6 group">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{product.sku}</span>
-                    <h4 className="text-lg font-bold text-slate-900">{product.product_name}</h4>
+              <div key={product.product_id} className="saas-card flex flex-col group overflow-hidden">
+                {/* Portrait Image Container */}
+                <div className="relative aspect-[3/4] w-full bg-slate-50 overflow-hidden">
+                  {product.image_url ? (
+                    <img 
+                      src={product.image_url} 
+                      alt={product.product_name} 
+                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-slate-200 text-6xl">
+                      👕
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{product.sku}</span>
+                      <h4 className="text-lg font-bold text-slate-900">{product.product_name}</h4>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-black text-slate-900">${product.price}</p>
+                      <p className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-1">
+                        Profit: ${(product.price - product.cost_price).toFixed(2)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-slate-900">${product.price}</p>
-                    <p className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-1">
-                      Unit Profit: ${(product.price - product.cost_price).toFixed(2)}
-                    </p>
+                  
+                  <div className="mt-auto">
+                    <form onSubmit={(e) => updateStock(e, product.product_id)} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase">In Stock</label>
+                          <input name="stock_quantity" type="number" defaultValue={product.stock_quantity} className="saas-input text-xs py-1" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase">Alert At</label>
+                          <input name="low_stock_alert" type="number" defaultValue={product.low_stock_alert} className="saas-input text-xs py-1" />
+                        </div>
+                      </div>
+                      <button type="submit" className="saas-button-secondary w-full py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">Update Stock</button>
+                    </form>
+                    {product.stock_quantity <= product.low_stock_alert && (
+                      <div className="mt-4 px-3 py-1 bg-rose-50 text-rose-600 text-[10px] font-bold uppercase rounded-lg text-center animate-pulse">Low Stock Warning</div>
+                    )}
                   </div>
                 </div>
-                <form onSubmit={(e) => updateStock(e, product.product_id)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">In Stock</label>
-                      <input name="stock_quantity" type="number" defaultValue={product.stock_quantity} className="saas-input text-xs py-1" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Alert At</label>
-                      <input name="low_stock_alert" type="number" defaultValue={product.low_stock_alert} className="saas-input text-xs py-1" />
-                    </div>
-                  </div>
-                  <button type="submit" className="saas-button-secondary w-full py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">Update</button>
-                </form>
-                {product.stock_quantity <= product.low_stock_alert && (
-                  <div className="mt-4 px-3 py-1 bg-rose-50 text-rose-600 text-[10px] font-bold uppercase rounded-lg text-center animate-pulse">Low Stock Warning</div>
-                )}
               </div>
             ))}
           </div>
@@ -604,6 +643,122 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {activeTab === "satisfaction" && (
+        <div className="space-y-8">
+          {/* Satisfaction Stats */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="saas-card p-8 text-center flex flex-col items-center justify-center">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Average Rating</p>
+              <div className="flex items-center gap-3">
+                <span className="text-5xl font-black text-slate-900">{averageRating}</span>
+                <div className="text-amber-400 text-2xl flex">
+                  {[...Array(5)].map((_, i) => <span key={i}>{i < Math.round(Number(averageRating)) ? "★" : "☆"}</span>)}
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-4 italic">Based on {reviews.length} customer reviews</p>
+            </div>
+            
+            <div className="saas-card p-6 sm:col-span-2">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Rating Distribution</h4>
+              <div className="space-y-3">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const rating = report?.ratings.find(r => r.rating === star);
+                  const totalRatings = report?.ratings.reduce((acc, curr) => acc + curr.count, 0) || 1;
+                  const percent = rating ? (rating.count / totalRatings) * 100 : 0;
+                  return (
+                    <div key={star} className="flex items-center gap-4">
+                      <span className="text-xs font-bold text-slate-500 w-8">{star} ★</span>
+                      <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full transition-all duration-1000 ${star >= 4 ? 'bg-emerald-500' : star === 3 ? 'bg-amber-400' : 'bg-rose-500'}`} style={{ width: `${percent}%` }}></div>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 w-16 text-right">{rating?.count || 0} reviews</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+             {/* Top Rated Products */}
+             <div className="lg:col-span-1 space-y-6">
+                <div className="saas-card overflow-hidden">
+                  <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+                    <h3 className="text-lg font-bold text-slate-900">Top Rated Products</h3>
+                  </div>
+                  <div className="p-0">
+                    <table className="w-full text-left text-sm">
+                      <tbody className="divide-y divide-slate-100">
+                        {report?.highestRatedProducts.map((p, i) => (
+                          <tr key={i} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4">
+                              <p className="font-bold text-slate-900">{p.product_name}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-amber-400 text-xs">★</span>
+                                <span className="text-xs font-black text-slate-600">{Number(p.avg_rating).toFixed(1)}</span>
+                                <span className="text-[10px] text-slate-400">({p.rating_count} rev.)</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="saas-card p-6 bg-indigo-50 border-indigo-100">
+                  <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-2">Admin Tip</h4>
+                  <p className="text-xs text-indigo-700 leading-relaxed">
+                    Customer feedback is essential for inventory optimization. Consider increasing stock for products with 4.5+ ratings and running promotions for those with comments about price sensitivity.
+                  </p>
+                </div>
+             </div>
+
+             {/* All Reviews Feed */}
+             <div className="lg:col-span-2 space-y-6">
+                <div className="relative">
+                  <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input 
+                    type="text" 
+                    placeholder="Search reviews by customer, product or comment..." 
+                    className="saas-input pl-12 py-3 text-base shadow-sm"
+                    value={satisfactionSearch}
+                    onChange={(e) => setSatisfactionSearch(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  {filteredReviews.length === 0 ? (
+                    <div className="saas-card p-12 text-center text-slate-400 italic">No reviews found matching your search.</div>
+                  ) : (
+                    filteredReviews.map((review) => (
+                      <div key={review.order_item_id} className="saas-card p-6 hover:border-indigo-200 transition-colors">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <p className="text-sm font-black text-slate-900">{review.customer_name}</p>
+                            <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mt-0.5">{review.product_name}</p>
+                          </div>
+                          <div className="flex text-amber-400 text-sm">
+                            {[...Array(5)].map((_, i) => <span key={i}>{i < (review.rating || 0) ? "★" : "☆"}</span>)}
+                          </div>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                          <p className="text-sm text-slate-600 italic">"{review.comments || "The customer did not leave a comment."}"</p>
+                        </div>
+                        <div className="mt-4 flex justify-end">
+                           <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Order Ref: #{review.order_id}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === "reports" && (
         <div className="space-y-8">
           <div className="relative">
@@ -639,6 +794,42 @@ export default function AdminDashboardPage() {
                 <div className="mt-2 h-1 w-full bg-white/20 rounded-full overflow-hidden">
                   <div className="h-full bg-emerald-400" style={{ width: `${(report?.summary?.total_profit! / (report?.summary?.total_sales! || 1)) * 100}%` }}></div>
                 </div>
+              </div>
+            </div>
+
+            {/* Monthly Financial Performance */}
+            <div className="mb-12">
+              <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Monthly Financial Performance</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest">
+                    <tr>
+                      <th className="px-6 py-3">Month</th>
+                      <th className="px-6 py-3">Gross Income</th>
+                      <th className="px-6 py-3">Investment (Cost)</th>
+                      <th className="px-6 py-3">Net Profit</th>
+                      <th className="px-6 py-3 text-right">Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {report?.trends.map((month) => {
+                      const margin = (month.profit / (month.sales || 1)) * 100;
+                      return (
+                        <tr key={month.month} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 font-bold text-slate-900">{month.month}</td>
+                          <td className="px-6 py-4 text-emerald-600 font-medium">${month.sales.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-rose-500 font-medium">${month.cost.toLocaleString()}</td>
+                          <td className="px-6 py-4 font-black text-slate-900">${month.profit.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right">
+                            <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${margin > 20 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                              {margin.toFixed(1)}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
 
@@ -702,7 +893,7 @@ export default function AdminDashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-12 border-t border-slate-100">
               {/* Top Products */}
               <div>
-                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Top Performing Products</h4>
+                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Top Performing Products (Volume)</h4>
                 <div className="space-y-4">
                   {report?.topProducts.map((p, i) => (
                     <div key={i} className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100">
@@ -715,9 +906,9 @@ export default function AdminDashboardPage() {
                   ))}
                 </div>
               </div>
-              {/* Satisfaction Report */}
+              {/* Satisfaction Summary Mini */}
               <div>
-                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Rating Distribution</h4>
+                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Quick Rating Snapshot</h4>
                 <div className="space-y-4">
                   {[5, 4, 3, 2, 1].map((star) => {
                     const rating = report?.ratings.find(r => r.rating === star);
@@ -734,6 +925,7 @@ export default function AdminDashboardPage() {
                     );
                   })}
                 </div>
+                <button onClick={() => setActiveTab("satisfaction")} className="mt-8 text-xs font-bold text-indigo-600 uppercase tracking-widest hover:text-indigo-700">View Detailed Satisfaction Report →</button>
               </div>
             </div>
           </section>

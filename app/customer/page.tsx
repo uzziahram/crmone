@@ -326,7 +326,7 @@ export default function CustomerDashboardPage() {
             <div className="grid gap-6 md:grid-cols-2">
               {[1, 2, 3, 4].map((n) => (
                 <div key={n} className="saas-card p-6 animate-pulse">
-                  <div className="h-48 bg-slate-100 rounded-xl mb-4"></div>
+                  <div className="aspect-[3/4] bg-slate-100 rounded-xl mb-4"></div>
                   <div className="h-6 w-3/4 bg-slate-100 rounded mb-4"></div>
                   <div className="h-4 w-1/2 bg-slate-100 rounded mb-8"></div>
                   <div className="h-10 w-full bg-slate-100 rounded"></div>
@@ -355,7 +355,7 @@ export default function CustomerDashboardPage() {
                     className="saas-card flex flex-col p-4 overflow-hidden group cursor-pointer hover:border-indigo-200 transition-all hover:shadow-xl hover:shadow-indigo-50/50"
                     onClick={() => setSelectedGroupForModal(group)}
                   >
-                    <div className="relative h-48 w-full bg-slate-50 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
+                    <div className="relative aspect-[3/4] w-full bg-slate-50 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
                       {group.displayImage ? (
                         <img 
                           src={group.displayImage} 
