@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import database from "@/lib/database/db";
+import { z } from "zod";
+
+const businessProfileSchema = z.object({
+  company_name: z.string().min(1, "Company name is required"),
+  address: z.string().optional().nullable(),
+  contact_email: z.string().email("Invalid contact email").optional().nullable(),
+  contact_phone: z.string().optional().nullable(),
+  tax_id: z.string().optional().nullable(),
+  currency: z.string().length(3).optional().default("USD"),
+});
 
 export async function GET() {
   try {
@@ -12,8 +22,17 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { company_name, address, contact_email, contact_phone, tax_id, currency } = body;
+    const json = await req.json();
+    const validation = businessProfileSchema.safeParse(json);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    const { company_name, address, contact_email, contact_phone, tax_id, currency } = validation.data;
 
     const [rows]: any = await database.query("SELECT id FROM business_profile LIMIT 1");
     

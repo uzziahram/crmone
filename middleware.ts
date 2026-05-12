@@ -14,8 +14,8 @@ export function middleware(req: NextRequest) {
   const isCustomerPath = pathname.startsWith("/customer");
   const isAdminApiPath =
     pathname.startsWith("/api/reviews") ||
-    pathname.match(/^\/api\/products\/[^/]+\/stock$/) !== null ||
-    (pathname.match(/^\/api\/products\/[^/]+$/) !== null && req.method === "DELETE");
+    pathname.match(/^\/api\/products\/\d+\/stock$/) !== null ||
+    (pathname.match(/^\/api\/products\/\d+$/) !== null && req.method === "DELETE");
 
   if (isAdminPath || isAdminApiPath) {
     if (!token || role !== "admin") {

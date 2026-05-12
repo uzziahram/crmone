@@ -25,6 +25,7 @@ type Customer = {
       product_name: string;
       sku: string;
       price: number;
+      size?: string;
     };
   }>;
 };
@@ -39,6 +40,7 @@ type Product = {
   low_stock_alert: number;
   category?: string;
   image_url?: string;
+  size?: string;
 };
 
 type Order = {
@@ -55,6 +57,7 @@ type Order = {
     quantity: number;
     rating?: number;
     comments?: string;
+    size?: string;
   }>;
 };
 
@@ -96,6 +99,9 @@ export default function AdminDashboardPage() {
   // Detailed Customer View State
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
+  
+  // Product Editing State
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -186,17 +192,30 @@ export default function AdminDashboardPage() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     try {
-      await apiRequest(`/api/products/${productId}/stock`, {
+      const updates: any = {
+        stock_quantity: Number(formData.get("stock_quantity")),
+        low_stock_alert: Number(formData.get("low_stock_alert")),
+      };
+      
+      const product_name = formData.get("product_name");
+      const price = formData.get("price");
+      
+      if (product_name) updates.product_name = String(product_name);
+      if (price) updates.price = Number(price);
+
+      const endpoint = editingProductId === productId 
+        ? `/api/products/${productId}` 
+        : `/api/products/${productId}/stock`;
+
+      await apiRequest(endpoint, {
         method: "PATCH",
-        body: JSON.stringify({ 
-          stock_quantity: Number(formData.get("stock_quantity")), 
-          low_stock_alert: Number(formData.get("low_stock_alert")) 
-        }),
+        body: JSON.stringify(updates),
       });
-      setMessage("Stock updated.");
+      setMessage("Product updated successfully.");
+      setEditingProductId(null);
       setTimeout(() => setMessage(""), 3000);
       await loadAll();
-    } catch (err) { setError("Stock update failed"); }
+    } catch (err) { setError("Product update failed"); }
   }
 
   async function addProduct(event: FormEvent<HTMLFormElement>) {
@@ -324,7 +343,17 @@ export default function AdminDashboardPage() {
                     {orders.slice(0, 5).map((order) => (
                       <tr key={order.order_id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 font-bold">#{order.order_id}</td>
-                        <td className="px-6 py-4">{order.full_name}</td>
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-slate-900">{order.full_name}</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {order.items.slice(0, 2).map((item, i) => (
+                              <span key={i} className="text-[9px] bg-slate-100 text-slate-500 px-1 rounded-sm">
+                                {item.product_name} {item.size && `(${item.size})`}
+                              </span>
+                            ))}
+                            {order.items.length > 2 && <span className="text-[9px] text-slate-400">+{order.items.length - 2} more</span>}
+                          </div>
+                        </td>
                         <td className="px-6 py-4">
                           <span className={`saas-badge ${order.status === 'delivered' ? 'saas-badge-success' : 'saas-badge-info'}`}>
                             {order.status}
@@ -448,12 +477,35 @@ export default function AdminDashboardPage() {
 
                 <div className="p-6 flex-1 flex flex-col">
                   <div className="flex justify-between items-start mb-4">
-                    <div>
+                    <div className="flex-1 mr-2">
                       <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{product.sku}</span>
-                      <h4 className="text-lg font-bold text-slate-900">{product.product_name}</h4>
+                      {editingProductId === product.product_id ? (
+                        <input 
+                          name="product_name" 
+                          form={`form-${product.product_id}`}
+                          defaultValue={product.product_name} 
+                          className="saas-input text-lg font-bold py-1 mt-1" 
+                        />
+                      ) : (
+                        <h4 className="text-lg font-bold text-slate-900">{product.product_name}</h4>
+                      )}
+                      {product.size && (
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Size: {product.size}</p>
+                      )}
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-black text-slate-900">${product.price}</p>
+                      {editingProductId === product.product_id ? (
+                        <input 
+                          name="price" 
+                          type="number"
+                          step="0.01"
+                          form={`form-${product.product_id}`}
+                          defaultValue={product.price} 
+                          className="saas-input text-lg font-black py-1 w-24 text-right" 
+                        />
+                      ) : (
+                        <p className="text-lg font-black text-slate-900">${product.price}</p>
+                      )}
                       <p className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-1">
                         Profit: ${(product.price - product.cost_price).toFixed(2)}
                       </p>
@@ -461,7 +513,11 @@ export default function AdminDashboardPage() {
                   </div>
                   
                   <div className="mt-auto">
-                    <form onSubmit={(e) => updateStock(e, product.product_id)} className="space-y-4">
+                    <form 
+                      id={`form-${product.product_id}`}
+                      onSubmit={(e) => updateStock(e, product.product_id)} 
+                      className="space-y-4"
+                    >
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold text-slate-400 uppercase">In Stock</label>
@@ -472,7 +528,31 @@ export default function AdminDashboardPage() {
                           <input name="low_stock_alert" type="number" defaultValue={product.low_stock_alert} className="saas-input text-xs py-1" />
                         </div>
                       </div>
-                      <button type="submit" className="saas-button-secondary w-full py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">Update Stock</button>
+                      <div className="flex gap-2">
+                        {editingProductId === product.product_id ? (
+                          <>
+                            <button type="submit" className="saas-button-primary flex-1 py-1 text-xs">Save Changes</button>
+                            <button 
+                              type="button" 
+                              onClick={() => setEditingProductId(null)} 
+                              className="saas-button-secondary flex-1 py-1 text-xs"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button type="submit" className="saas-button-secondary flex-1 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity">Update Stock</button>
+                            <button 
+                              type="button" 
+                              onClick={() => setEditingProductId(product.product_id)} 
+                              className="saas-button-secondary flex-1 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              Edit Details
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </form>
                     {product.stock_quantity <= product.low_stock_alert && (
                       <div className="mt-4 px-3 py-1 bg-rose-50 text-rose-600 text-[10px] font-bold uppercase rounded-lg text-center animate-pulse">Low Stock Warning</div>
@@ -537,7 +617,10 @@ export default function AdminDashboardPage() {
                       <div className="space-y-3">
                         {selectedCustomer.cart_items.map((item, i) => (
                           <div key={i} className="flex justify-between items-center text-sm p-2 bg-slate-50 rounded-lg">
-                            <span className="font-bold text-slate-900">{item.product?.product_name}</span>
+                            <div className="flex flex-col">
+                              <span className="font-bold text-slate-900">{item.product?.product_name}</span>
+                              {item.product?.size && <span className="text-[10px] text-slate-400">Size: {item.product.size}</span>}
+                            </div>
                             <span className="text-slate-500">x{item.quantity}</span>
                           </div>
                         ))}
@@ -847,7 +930,16 @@ export default function AdminDashboardPage() {
                         <td className="px-6 py-4 font-bold text-slate-900">#{o.order_id}</td>
                         <td className="px-6 py-4">
                           <p className="font-bold text-slate-900">{o.full_name}</p>
-                          <p className="text-[10px] text-slate-400">{o.email}</p>
+                          <p className="text-[10px] text-slate-400 mb-2">{o.email}</p>
+                          <div className="space-y-1">
+                            {o.items.map((item, i) => (
+                              <div key={i} className="text-[10px] flex items-center gap-1">
+                                <span className="bg-slate-100 text-slate-600 px-1 rounded font-bold">x{item.quantity}</span>
+                                <span className="text-slate-500 font-medium">{item.product_name}</span>
+                                {item.size && <span className="text-indigo-500 font-bold bg-indigo-50 px-1 rounded">{item.size}</span>}
+                              </div>
+                            ))}
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <span className={`saas-badge ${o.status === 'delivered' ? 'saas-badge-success' : 'saas-badge-info'}`}>

@@ -3,6 +3,18 @@ import database from "@/lib/database/db";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { z } from "zod";
+
+const productSchema = z.object({
+  product_name: z.string().min(1, "Product name is required"),
+  sku: z.string().min(1, "SKU is required"),
+  category: z.string().optional().nullable(),
+  size: z.string().optional().nullable(),
+  price: z.number().min(0, "Price cannot be negative"),
+  cost_price: z.number().min(0, "Cost price cannot be negative").default(0),
+  stock_quantity: z.number().int().min(0, "Stock cannot be negative"),
+  low_stock_alert: z.number().int().min(0).default(0),
+});
 
 // GET: Fetch all products
 export async function GET() {
@@ -25,23 +37,38 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     
-    const product_name = formData.get("product_name") as string;
-    const sku = formData.get("sku") as string;
-    const category = formData.get("category") as string;
-    const size = formData.get("size") as string;
-    const price = Number(formData.get("price"));
-    const cost_price = Number(formData.get("cost_price"));
-    const stock_quantity = Number(formData.get("stock_quantity"));
-    const low_stock_alert = Number(formData.get("low_stock_alert"));
-    const imageFile = formData.get("image") as File | null;
+    const rawData = {
+      product_name: formData.get("product_name"),
+      sku: formData.get("sku"),
+      category: formData.get("category"),
+      size: formData.get("size"),
+      price: formData.get("price") ? Number(formData.get("price")) : undefined,
+      cost_price: formData.get("cost_price") ? Number(formData.get("cost_price")) : undefined,
+      stock_quantity: formData.get("stock_quantity") ? Number(formData.get("stock_quantity")) : undefined,
+      low_stock_alert: formData.get("low_stock_alert") ? Number(formData.get("low_stock_alert")) : undefined,
+    };
 
-    // Basic validation
-    if (!product_name || !sku || isNaN(price) || isNaN(cost_price) || isNaN(stock_quantity)) {
+    const validation = productSchema.safeParse(rawData);
+
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing or invalid required fields" },
+        { error: validation.error.errors[0].message },
         { status: 400 }
       );
     }
+
+    const { 
+      product_name, 
+      sku, 
+      category, 
+      size, 
+      price, 
+      cost_price, 
+      stock_quantity, 
+      low_stock_alert 
+    } = validation.data;
+    
+    const imageFile = formData.get("image") as File | null;
 
     let image_url = null;
 

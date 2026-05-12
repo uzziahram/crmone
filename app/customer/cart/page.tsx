@@ -16,6 +16,7 @@ type CartItem = {
     price: number;
     sku: string;
     image_url?: string;
+    size?: string;
   };
 };
 
@@ -98,9 +99,8 @@ export default function CustomerCartPage() {
     setError("");
     setActionLoadingItemId(cartItemId);
     try {
-      await apiRequest<{ message: string }>("/api/products/addToCart", {
+      await apiRequest<{ message: string }>(`/api/products/addToCart?cart_item_id=${cartItemId}`, {
         method: "DELETE",
-        body: JSON.stringify({ cart_item_id: cartItemId }),
       });
       await loadCart();
     } catch (actionError) {
@@ -203,6 +203,11 @@ export default function CustomerCartPage() {
                       <h3 className="text-lg font-bold text-slate-900 mb-1 truncate">
                         {item.product?.product_name || `Product ${item.product_id}`}
                       </h3>
+                      {item.product?.size && (
+                        <p className="text-xs font-medium text-slate-500 mb-1">
+                          Size: <span className="text-slate-900">{item.product.size}</span>
+                        </p>
+                      )}
                       <p className="text-slate-500 text-sm mb-4">
                         ${item.product?.price ?? 0} per unit
                       </p>

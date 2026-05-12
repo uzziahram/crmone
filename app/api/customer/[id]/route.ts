@@ -8,8 +8,12 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // Await the params Promise to get the id
-  const { id: customerId } = await params;
+  const { id: customer_id_raw } = await params;
+  const customerId = Number(customer_id_raw);
+
+  if (isNaN(customerId) || customerId <= 0) {
+    return NextResponse.json({ error: "Invalid customer ID" }, { status: 400 });
+  }
 
   try {
     // 1. Fetch Basic Customer Info (Omit password for security)
@@ -23,7 +27,7 @@ export async function GET(
 
     // 3. Fetch Cart Items with Product details (using a JOIN)
     const cartQuery = `
-      SELECT ic.*, p.product_name, p.price, p.sku, p.image_url
+      SELECT ic.*, p.product_name, p.price, p.sku, p.image_url, p.size
       FROM in_cart ic
       JOIN products p ON ic.product_id = p.product_id
       WHERE ic.customer_id = ?
@@ -61,8 +65,8 @@ export async function GET(
           product_name: row.product_name,
           price: row.price,
           sku: row.sku,
-          image_url: row.image_url
-          // Add other product fields as needed
+          image_url: row.image_url,
+          size: row.size
         }
       }))
     };

@@ -4,7 +4,12 @@ import database from "@/lib/database/db";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const customerId = searchParams.get("customer_id");
+    const customerIdRaw = searchParams.get("customer_id");
+    const customerId = customerIdRaw ? Number(customerIdRaw) : null;
+
+    if (customerIdRaw && (isNaN(customerId!) || customerId! <= 0)) {
+      return NextResponse.json({ error: "Invalid customer ID" }, { status: 400 });
+    }
 
     const orderValues: Array<string | number> = [];
     let orderWhere = "";
@@ -41,7 +46,8 @@ export async function GET(req: NextRequest) {
         oi.price_at_purchase,
         oi.rating,
         oi.comments,
-        p.product_name
+        p.product_name,
+        p.size
       FROM order_items oi
       JOIN products p ON p.product_id = oi.product_id`
     );
@@ -55,6 +61,7 @@ export async function GET(req: NextRequest) {
       rating?: number;
       comments?: string;
       product_name: string;
+      size?: string;
     }>;
 
     const grouped = (ordersRows as Array<Record<string, unknown>>).map((order) => ({

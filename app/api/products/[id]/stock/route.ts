@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import database from "@/lib/database/db";
+import { z } from "zod";
+
+const stockSchema = z.object({
+  stock_quantity: z.number().min(0, "Stock quantity cannot be negative"),
+  low_stock_alert: z.number().min(0).optional().nullable(),
+});
 
 export async function PATCH(
   req: NextRequest,
@@ -11,18 +17,30 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id } = await params;
-    const { stock_quantity, low_stock_alert } = await req.json();
+    const { id: product_id_raw } = await params;
+    const product_id = Number(product_id_raw);
 
-    if (stock_quantity === undefined || Number(stock_quantity) < 0) {
-      return NextResponse.json({ error: "Valid stock_quantity is required." }, { status: 400 });
+    if (isNaN(product_id) || product_id <= 0) {
+      return NextResponse.json({ error: "Invalid product ID" }, { status: 400 });
     }
+
+    const json = await req.json();
+    const validation = stockSchema.safeParse(json);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    const { stock_quantity, low_stock_alert } = validation.data;
 
     await database.query(
       `UPDATE products
        SET stock_quantity = ?, low_stock_alert = COALESCE(?, low_stock_alert)
        WHERE product_id = ?`,
-      [Number(stock_quantity), low_stock_alert ?? null, id]
+      [stock_quantity, low_stock_alert ?? null, product_id]
     );
 
     return NextResponse.json({ message: "Stock updated." }, { status: 200 });

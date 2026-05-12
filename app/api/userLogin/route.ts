@@ -5,10 +5,19 @@ import { RowDataPacket } from "mysql2";
 import { NextRequest, NextResponse } from "next/server";
 
 import { signToken } from "@/lib/auth/auth";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { successResponse, handleApiError, errorResponse } from "@/lib/api-utils";
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
 
 export async function POST(req: NextRequest ) {
   try {
-    const { email , password } = await req.json()
+    const json = await req.json()
+    const { email, password } = loginSchema.parse(json)
 
     const [rows] = await database.execute<RowDataPacket[]>(
       "SELECT * FROM customers WHERE email = ?",
@@ -16,16 +25,15 @@ export async function POST(req: NextRequest ) {
     )
 
     if (rows.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 400 })
+      return errorResponse("User not found", 400)
     }
 
     const Member = rows[0] as Customer;
 
-    console.log(Member)
+    const isMatch = await bcrypt.compare(password, Member.password);
 
-    if (Member.password !== password) {
-	console.log(Member.password, password)
-      	return NextResponse.json({ error: "Invalid password" }, { status: 400 })
+    if (!isMatch) {
+      	return errorResponse("Invalid password", 400)
     }
         // ✅ create session data
     const token = signToken({
@@ -34,8 +42,8 @@ export async function POST(req: NextRequest ) {
       email: Member.email,
     })
 
-    const response = NextResponse.json({ message: "Login success" })
-    
+    const response = successResponse({ message: "Login success" })
+
     response.cookies.set("token", token, {
       httpOnly: true,   // cannot be accessed by JS (more secure)
       secure: false,    // true in production (HTTPS)
@@ -52,6 +60,6 @@ export async function POST(req: NextRequest ) {
     return response;
 
   } catch (err) {
-    return NextResponse.json( { message: "Invalid credentials", status: 401  })
+    return handleApiError(err);
   }
 }

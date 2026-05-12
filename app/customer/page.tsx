@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import AppShell from "@/components/app-shell";
 import { apiRequest } from "@/lib/client-api";
 import { getActiveCustomerId } from "@/lib/active-customer";
@@ -85,9 +84,7 @@ export default function CustomerDashboardPage() {
       productData.forEach(p => {
         initialQtys[p.product_id] = 1;
         
-        const skuMatch = p.sku.match(/^(.*[-_])(.*)$/) || p.sku.match(/^(.*?)(\d+)$/);
-        const baseSku = skuMatch ? skuMatch[1] : p.sku;
-        const groupKey = `${p.product_name.toLowerCase()}@${baseSku.toLowerCase()}`;
+        const groupKey = `${p.product_name.toLowerCase()}@${(p.category || "General").toLowerCase()}`;
         
         if (!seenGroups.has(groupKey)) {
           initialVariants[groupKey] = p.product_id;
@@ -162,9 +159,7 @@ export default function CustomerDashboardPage() {
       const matchesCategory = selectedCategory === "All" || (p.category || "General") === selectedCategory;
 
       if (matchesSearch && matchesCategory) {
-        const skuMatch = p.sku.match(/^(.*[-_])(.*)$/) || p.sku.match(/^(.*?)(\d+)$/);
-        const baseSku = skuMatch ? skuMatch[1] : p.sku;
-        const groupKey = `${p.product_name.toLowerCase()}@${baseSku.toLowerCase()}`;
+        const groupKey = `${p.product_name.toLowerCase()}@${(p.category || "General").toLowerCase()}`;
 
         if (!groups[groupKey]) {
           groups[groupKey] = {
@@ -214,80 +209,10 @@ export default function CustomerDashboardPage() {
 
   return (
     <AppShell title={`Welcome, ${customerProfile?.full_name || "Customer"}`}>
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-        {/* Sidebar: Profile & Cart Summary */}
-        <aside className="lg:col-span-1 space-y-6">
-          <div className="saas-card p-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-4">My Profile</h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-slate-400">Email</p>
-                <p className="text-sm font-medium text-slate-900 truncate">{customerProfile?.email}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400">Phone</p>
-                <p className="text-sm font-medium text-slate-900">{customerProfile?.contact_number || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400">Address</p>
-                <p className="text-sm font-medium text-slate-900">{customerProfile?.address || "N/A"}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="saas-card p-6 bg-indigo-600 text-white border-none shadow-indigo-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-indigo-100">Your Cart</h3>
-              <svg className="h-5 w-5 text-indigo-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-            </div>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-3xl font-bold">{cartCount}</p>
-                <p className="text-xs text-indigo-200">Total items in cart</p>
-              </div>
-              <Link href="/customer/cart" className="rounded-lg bg-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-white/30 transition-colors">
-                View Cart
-              </Link>
-            </div>
-          </div>
-
-          <div className="saas-card p-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-4">Recent Orders</h3>
-            {!customerProfile?.orders?.length ? (
-              <p className="text-sm text-slate-400 italic">No orders found.</p>
-            ) : (
-              <ul className="space-y-3">
-                {customerProfile.orders.slice(0, 5).map((order) => (
-                  <li key={order.order_id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 group">
-                    <div>
-                      <Link href={`/customer/orders/${order.order_id}`} className="text-xs font-bold text-slate-900 hover:text-indigo-600 transition-colors">
-                        Order #{order.order_id}
-                      </Link>
-                      <p className="text-[10px] text-slate-400">{new Date(order.order_date).toLocaleDateString()}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`saas-badge ${order.status === "completed" || order.status === "delivered" ? "saas-badge-success" : "saas-badge-info"}`}>
-                        {order.status}
-                      </span>
-                      <Link href={`/customer/orders/${order.order_id}`} className="text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </aside>
-
-        {/* Main Content: Product Catalog */}
-        <main className="lg:col-span-3 space-y-6">
-          {/* Search & Filters */}
-          <div className="saas-card p-4 flex flex-col md:flex-row gap-4 items-center">
+      <div className="space-y-8">
+        {/* Top Section: Search & Cart Summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 saas-card p-6 flex flex-col md:flex-row gap-4 items-center">
             <div className="relative flex-1 w-full">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -314,8 +239,28 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
 
+          <div className="saas-card p-6 bg-indigo-600 text-white border-none shadow-xl shadow-indigo-100 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-3xl font-black leading-none">{cartCount}</p>
+                <p className="text-[10px] text-indigo-100 uppercase font-bold tracking-wider mt-1">Items in Cart</p>
+              </div>
+            </div>
+            <Link href="/customer/cart" className="rounded-lg bg-white/20 px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-white/30 transition-colors">
+              View Cart
+            </Link>
+          </div>
+        </div>
+
+        {/* Main Content: Product Catalog */}
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">Product Catalog</h2>
+            <h2 className="text-2xl font-bold text-slate-900">Product Catalog</h2>
             <div className="flex items-center gap-2 text-sm text-slate-500">
               <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
               {filteredGroupedProducts.length} unique products
@@ -323,8 +268,8 @@ export default function CustomerDashboardPage() {
           </div>
 
           {loading ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              {[1, 2, 3, 4].map((n) => (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
                 <div key={n} className="saas-card p-6 animate-pulse">
                   <div className="aspect-[3/4] bg-slate-100 rounded-xl mb-4"></div>
                   <div className="h-6 w-3/4 bg-slate-100 rounded mb-4"></div>
@@ -344,7 +289,7 @@ export default function CustomerDashboardPage() {
               </button>
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredGroupedProducts.map((group) => {
                 const currentVariantId = selectedVariantId[group.groupKey];
                 const currentVariant = group.variants.find(v => v.product_id === currentVariantId) || group.variants[0];
@@ -403,7 +348,7 @@ export default function CustomerDashboardPage() {
               })}
             </div>
           )}
-        </main>
+        </div>
       </div>
 
       {selectedGroupForModal && (
@@ -470,12 +415,10 @@ export default function CustomerDashboardPage() {
                         <label className="text-xs font-bold uppercase text-slate-400 block mb-3">Select Variant</label>
                         <div className="flex flex-wrap gap-2">
                           {selectedGroupForModal.variants.map((v) => {
-                            const skuVariantMatch = v.sku.match(/^(.*[-_])(.*)$/) || v.sku.match(/^(.*?)(\d+)$/);
-                            const variantLabel = skuVariantMatch ? skuVariantMatch[2] : v.sku;
-
                             return (
                               <button
                                 key={v.product_id}
+                                type="button"
                                 onClick={() => setSelectedVariantId(prev => ({ ...prev, [selectedGroupForModal.groupKey]: v.product_id }))}
                                 className={`px-4 py-2 text-sm font-bold rounded-xl border transition-all ${
                                   currentVariantId === v.product_id 
@@ -483,7 +426,7 @@ export default function CustomerDashboardPage() {
                                     : "bg-white text-slate-600 border-slate-200 hover:border-indigo-400"
                                 }`}
                               >
-                                {v.size || variantLabel || `v${v.product_id}`}
+                                {v.size || `v${v.product_id}`}
                               </button>
                             );
                           })}

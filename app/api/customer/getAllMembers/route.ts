@@ -4,18 +4,13 @@ import { Customer } from "@/types/Customer"; // Adjust path to where your interf
 
 export async function GET() {
   try {
-    // We omit sensitive or relational fields that aren't part of this specific SELECT query
-    type CustomerResponse = Omit<Customer, 'password' | 'orders' | 'cart_items'>;
-
     const query = `
-      SELECT * FROM customers
+      SELECT customer_id, full_name, email, contact_number, address, created_at 
+      FROM customers
     `;
     
-    // Execute the query and cast the result to our interface type
     const [rows] = await database.query(query);
-    const customers = rows as CustomerResponse[];
-
-    return NextResponse.json(customers, { status: 200 });
+    return NextResponse.json(rows, { status: 200 });
     
   } catch (error) {
     console.error("Failed to fetch customers:", error);

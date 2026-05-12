@@ -5,7 +5,12 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: orderId } = await params;
+  const { id: order_id_raw } = await params;
+  const orderId = Number(order_id_raw);
+
+  if (isNaN(orderId) || orderId <= 0) {
+    return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
+  }
 
   try {
     // 1. Fetch the Order details
@@ -25,7 +30,7 @@ export async function GET(
 
     // 2. Fetch the Order Items with Product details
     const [itemsRows]: any = await database.query(
-      `SELECT oi.*, p.product_name, p.sku, p.category
+      `SELECT oi.*, p.product_name, p.sku, p.category, p.size
        FROM order_items oi
        JOIN products p ON oi.product_id = p.product_id
        WHERE oi.order_id = ?`,

@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { RowDataPacket } from "mysql2";
 import database from "@/lib/database/db";
 import { signToken } from "@/lib/auth/auth";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { successResponse, handleApiError, errorResponse } from "@/lib/api-utils";
+
+const adminLoginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
 
 type AdminRow = RowDataPacket & {
   user_id: number;
@@ -11,14 +19,8 @@ type AdminRow = RowDataPacket & {
 
 export async function POST(req: NextRequest) {
   try {
-    const { username, password } = await req.json();
-
-    if (!username || !password) {
-      return NextResponse.json(
-        { error: "Username and password are required." },
-        { status: 400 }
-      );
-    }
+    const json = await req.json();
+    const { username, password } = adminLoginSchema.parse(json);
 
     const [rows] = await database.execute<AdminRow[]>(
       "SELECT * FROM users WHERE username = ?",
@@ -26,12 +28,14 @@ export async function POST(req: NextRequest) {
     );
 
     if (rows.length === 0) {
-      return NextResponse.json({ error: "Admin not found" }, { status: 404 });
+      return errorResponse("Admin not found", 404);
     }
 
     const member = rows[0];
-    if (member.password !== password) {
-      return NextResponse.json({ error: "Invalid password" }, { status: 400 });
+    const isMatch = await bcrypt.compare(password, member.password);
+
+    if (!isMatch) {
+      return errorResponse("Invalid password", 400);
     }
 
     const token = signToken({
@@ -39,7 +43,7 @@ export async function POST(req: NextRequest) {
       userName: member.username,
     });
 
-    const response = NextResponse.json({ message: "Admin login success" });
+    const response = successResponse({ message: "Admin login success" });
     response.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -55,7 +59,6 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    return handleApiError(error);
   }
 }

@@ -1,20 +1,28 @@
 import { NextResponse } from "next/server";
-import database from "@/lib/database/db"; // Adjust this path to your DB connection file
+import database from "@/lib/database/db"; 
+import { z } from "zod";
+
+const checkoutSchema = z.object({
+  customer_id: z.number().positive(),
+  payment_method: z.string().min(1, "Payment method is required"),
+});
 
 export async function POST(request: Request) {
   // We need to get a dedicated connection from the pool to run a transaction
   const connection = await database.getConnection();
 
   try {
-    const { customer_id, payment_method } = await request.json();
+    const json = await request.json();
+    const validation = checkoutSchema.safeParse(json);
 
-    if (!customer_id) {
-      return NextResponse.json({ error: "customer_id is required." }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0].message },
+        { status: 400 }
+      );
     }
 
-    if (!payment_method) {
-      return NextResponse.json({ error: "payment_method is required." }, { status: 400 });
-    }
+    const { customer_id, payment_method } = validation.data;
 
     // 1. Start the transaction
     await connection.beginTransaction();

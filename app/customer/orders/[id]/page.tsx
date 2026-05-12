@@ -12,6 +12,7 @@ type OrderItem = {
   product_name: string;
   sku: string;
   category?: string;
+  size?: string;
   quantity: number;
   price_at_purchase: number;
   rating?: number;
@@ -155,6 +156,11 @@ export default function OrderDetailsPage() {
                           <h4 className="text-lg font-bold text-slate-900">{item.product_name}</h4>
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.sku}</span>
                         </div>
+                        {item.size && (
+                          <p className="text-xs font-medium text-slate-500 mb-1">
+                            Size: <span className="text-slate-900">{item.size}</span>
+                          </p>
+                        )}
                         <p className="text-sm text-slate-500">
                           Qty: <span className="font-bold text-slate-700">{item.quantity}</span> · 
                           Price: <span className="font-bold text-slate-700">${item.price_at_purchase}</span>

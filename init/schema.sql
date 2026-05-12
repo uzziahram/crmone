@@ -81,7 +81,5 @@ CREATE TABLE IF NOT EXISTS business_profile (
 );
 
 -- Insert default admin user (password: admin123)
--- Note: In a real app, passwords should be hashed. 
--- Based on the code, it seems to be using plain text comparison for now.
-INSERT INTO users (username, password) VALUES ('admin', 'admin123') 
+INSERT INTO users (username, password) VALUES ('admin', '$2b$10$EhVlIzb6N0y5wIyNpMuVDO3fiiBSNLdxDuU5NwZlceLpFCypmpPfW') 
 ON DUPLICATE KEY UPDATE username=username;

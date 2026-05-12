@@ -2,19 +2,22 @@ import database from "@/lib/database/db";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { NextRequest, NextResponse } from "next/server";
 import { signToken } from "@/lib/auth/auth";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { successResponse, handleApiError, errorResponse } from "@/lib/api-utils";
+
+const registerSchema = z.object({
+  full_name: z.string().min(2, "Full name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  contact_number: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Extract customer fields based on your ERD
-    const { full_name, email, password, contact_number, address } = await req.json();
-
-    // Basic validation
-    if (!full_name || !email || !password) {
-      return NextResponse.json(
-        { error: "Full name, email, and password are required" },
-        { status: 400 }
-      );
-    }
+    const json = await req.json();
+    const { full_name, email, password, contact_number, address } = registerSchema.parse(json);
 
     // 2. Check if the customer already exists
     const [existing] = await database.execute<RowDataPacket[]>(
@@ -23,19 +26,20 @@ export async function POST(req: NextRequest) {
     );
 
     if (existing.length > 0) {
-      return NextResponse.json({ error: "Email is already registered" }, { status: 409 });
+      return errorResponse("Email is already registered", 409);
     }
 
-    // 3. Insert the new customer into the database
-    // Note: To match your login code, this inserts the password as plain text. 
-    // For production, you should hash this password (e.g., using bcrypt) before inserting.
+    // 3. Hash the password before inserting
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 4. Insert the new customer into the database
     const [result] = await database.execute<ResultSetHeader>(
       `INSERT INTO customers (full_name, email, password, contact_number, address) 
        VALUES (?, ?, ?, ?, ?)`,
       [
         full_name, 
         email, 
-        password, 
+        hashedPassword, 
         contact_number || null, 
         address || null
       ]
@@ -48,11 +52,8 @@ export async function POST(req: NextRequest) {
       email: email,
     });
 
-    const response = NextResponse.json(
-      { message: "Registration success" }, 
-      { status: 201 }
-    );
-    
+    const response = successResponse({ message: "Registration success" }, 201);
+
     // Set the cookie exactly like the login API
     response.cookies.set("token", token, {
       httpOnly: true,   // cannot be accessed by JS (more secure)
@@ -70,9 +71,6 @@ export async function POST(req: NextRequest) {
     return response;
 
   } catch (err) {
-    console.error(err);
-    return NextResponse.json(
-      { message: "An error occurred during registration", status: 500 }
-    );
+    return handleApiError(err);
   }
 }

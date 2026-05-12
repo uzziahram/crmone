@@ -1,19 +1,31 @@
 import { NextResponse } from "next/server";
-import database from "@/lib/database/db"; // Adjust this import path to match where you saved your DB connection snippet
+import database from "@/lib/database/db"; 
+import { z } from "zod";
+
+const addToCartSchema = z.object({
+  customer_id: z.number().positive(),
+  product_id: z.number().positive(),
+  quantity: z.number().positive(),
+});
+
+const updateCartSchema = z.object({
+  cart_item_id: z.number().positive(),
+  quantity: z.number().positive(),
+});
 
 export async function POST(request: Request) {
   try {
-    // 1. Extract data from the request body
-    const body = await request.json();
-    const { customer_id, product_id, quantity } = body;
+    const json = await request.json();
+    const validation = addToCartSchema.safeParse(json);
 
-    // 2. Validate input
-    if (!customer_id || !product_id || !quantity || quantity <= 0) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid input: customer_id, product_id, and a valid quantity are required." },
+        { error: validation.error.errors[0].message },
         { status: 400 }
       );
     }
+
+    const { customer_id, product_id, quantity } = validation.data;
 
     // 3. Check if the product exists and has enough stock
     const [products]: any = await database.query(
@@ -79,15 +91,17 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const body = await request.json();
-    const { cart_item_id, quantity } = body;
+    const json = await request.json();
+    const validation = updateCartSchema.safeParse(json);
 
-    if (!cart_item_id || !quantity || quantity <= 0) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid input: cart_item_id and a valid quantity are required." },
+        { error: validation.error.errors[0].message },
         { status: 400 }
       );
     }
+
+    const { cart_item_id, quantity } = validation.data;
 
     const [cartRows]: any = await database.query(
       `
@@ -125,17 +139,29 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const body = await request.json();
-    const { cart_item_id } = body;
+    const { searchParams } = new URL(request.url);
+    let cart_item_id_raw: string | number | null = searchParams.get("cart_item_id");
 
-    if (!cart_item_id) {
+    if (!cart_item_id_raw) {
+      const contentType = request.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          const body = await request.json();
+          cart_item_id_raw = body.cart_item_id;
+        } catch (e) { /* ignore parse error */ }
+      }
+    }
+
+    const cart_item_id = Number(cart_item_id_raw);
+
+    if (isNaN(cart_item_id) || cart_item_id <= 0) {
       return NextResponse.json(
-        { error: "Invalid input: cart_item_id is required." },
+        { error: "Invalid input: cart_item_id must be a positive number." },
         { status: 400 }
       );
     }
 
-    const [result]: any = await database.query(
+    const [result]: any = await database.execute(
       "DELETE FROM in_cart WHERE cart_item_id = ?",
       [cart_item_id]
     );

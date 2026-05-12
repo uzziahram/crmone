@@ -46,6 +46,20 @@ COPY . .
 RUN npm run build
 
 ################################################################################
+# Create a stage for development with hot-reloading.
+FROM base AS development
+ENV NODE_ENV=development
+# Install all dependencies (including devDependencies)
+RUN --mount=type=bind,source=package.json,target=package.json \
+    --mount=type=bind,source=package-lock.json,target=package-lock.json \
+    --mount=type=cache,target=/root/.npm \
+    npm ci
+# Copy source code
+COPY . .
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
+
+################################################################################
 # Create a new stage to run the application with minimal runtime dependencies
 # where the necessary files are copied from the build stage.
 FROM base AS final

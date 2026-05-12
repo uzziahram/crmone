@@ -1,35 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import database from "@/lib/database/db";
+import { z } from "zod";
+
+const reviewSchema = z.object({
+  customer_id: z.number().positive(),
+  product_id: z.number().positive(),
+  rating: z.number().min(1).max(5),
+  comments: z.string().optional().nullable(),
+});
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const { customer_id, product_id, rating, comments } = await req.json();
+    const { id: order_id_raw } = await params;
+    const order_id = Number(order_id_raw);
 
-    if (!customer_id || !product_id || !rating) {
+    if (isNaN(order_id) || order_id <= 0) {
+      return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
+    }
+
+    const json = await req.json();
+    const validation = reviewSchema.safeParse(json);
+
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "customer_id, product_id, and rating are required." },
+        { error: validation.error.errors[0].message },
         { status: 400 }
       );
     }
 
-    if (rating < 1 || rating > 5) {
-      return NextResponse.json({ error: "Rating must be 1-5." }, { status: 400 });
-    }
+    const { customer_id, product_id, rating, comments } = validation.data;
 
     const [orderRows] = await database.query(
       "SELECT order_id, customer_id, status FROM orders WHERE order_id = ?",
-      [id]
+      [order_id]
     );
     const order = (orderRows as Array<{ order_id: number; customer_id: number; status: string }>)[0];
     if (!order) {
       return NextResponse.json({ error: "Order not found." }, { status: 404 });
     }
 
-    if (Number(customer_id) !== order.customer_id) {
+    if (customer_id !== order.customer_id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (order.status !== "delivered") {
@@ -43,7 +56,7 @@ export async function PATCH(
       `UPDATE order_items
        SET rating = ?, comments = ?
        WHERE order_id = ? AND product_id = ?`,
-      [rating, comments || null, id, product_id]
+      [rating, comments || null, order_id, product_id]
     );
 
     const result = updateResult as { affectedRows?: number };
