@@ -13,7 +13,7 @@ export function handleApiError(error: any) {
   console.error("API Error:", error);
 
   if (error instanceof ZodError) {
-    return errorResponse(error.errors[0].message, 400, error.errors);
+    return errorResponse(error.issues[0].message, 400, error.issues);
   }
 
   if (error.code === 'ER_DUP_ENTRY') {
