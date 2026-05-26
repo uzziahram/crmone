@@ -82,7 +82,7 @@ export default function AppShell({
                 C
               </div>
               <span className="text-xl font-bold tracking-tight text-slate-900">
-                CRM<span className="text-indigo-600">ONE</span>
+                Universal<span className="text-indigo-600">Thread</span>
               </span>
             </Link>
             <nav className="hidden md:flex items-center gap-6">

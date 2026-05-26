@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StyleOne Boutique",
+  title: "Universal Thread",
   description: "Your one-stop destination for premium fashion and accessories.",
 };
 

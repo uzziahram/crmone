@@ -103,7 +103,7 @@ export default function LoginPage() {
           C
         </div>
         <span className="text-3xl font-bold tracking-tight text-slate-900">
-          CRM<span className="text-indigo-600">ONE</span>
+          Universal<span className="text-indigo-600"> Thread</span>
         </span>
       </div>
 
@@ -248,7 +248,7 @@ export default function LoginPage() {
       </section>
 
       <footer className="mt-12 text-sm text-slate-400">
-        &copy; {new Date().getFullYear()} CRMONE Systems. All rights reserved.
+        &copy; {new Date().getFullYear()} Universal Thread. All rights reserved.
       </footer>
     </div>
   );
