@@ -5,7 +5,7 @@ function unauthorizedRedirect(req: NextRequest) {
   return NextResponse.redirect(loginUrl);
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const role = req.cookies.get("role")?.value;
   const token = req.cookies.get("token")?.value;
