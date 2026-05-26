@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import database from "@/lib/database/db";
 import { z } from "zod";
+import { errorResponse } from "@/lib/api-utils";
 
 const statusSchema = z.object({
   status: z.enum(["pending", "processing", "shipped", "delivered", "cancelled"]),
@@ -24,9 +25,9 @@ export async function PATCH(
     const validation = statusSchema.safeParse(json);
 
     if (!validation.success) {
-      return NextResponse.json(
-        { error: validation.error.errors[0].message },
-        { status: 400 }
+      return errorResponse(
+        validation.error.errors.map((e) => e.message).join(", "),
+        400
       );
     }
 

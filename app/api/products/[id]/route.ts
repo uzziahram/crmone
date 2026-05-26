@@ -4,6 +4,7 @@ import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { unlink } from "fs/promises";
 import path from "path";
 import { z } from "zod";
+import { errorResponse } from "@/lib/api-utils";
 
 const updateProductSchema = z.object({
   product_name: z.string().min(1).optional(),
@@ -37,9 +38,9 @@ export async function PATCH(
     const validation = updateProductSchema.safeParse(json);
 
     if (!validation.success) {
-      return NextResponse.json(
-        { error: validation.error.errors[0].message },
-        { status: 400 }
+      return errorResponse(
+        validation.error.errors.map((e) => e.message).join(", "),
+        400
       );
     }
 
