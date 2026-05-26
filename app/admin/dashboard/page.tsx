@@ -87,6 +87,161 @@ type BusinessProfile = {
   currency: string;
 };
 
+type TrendMonth = { month: string; sales: number; cost: number; profit: number };
+
+function MonthlyProfitChart({ trends }: { trends: TrendMonth[] }) {
+  const [hovered, setHovered] = useState<{ monthIdx: number; type: string; value: number; x: number; y: number } | null>(null);
+
+  if (!trends.length) return <p className="text-sm text-slate-400 italic text-center py-8">No monthly data available yet.</p>;
+
+  const chartH = 240;
+  const chartW = 720;
+  const padL = 68;
+  const padR = 28;
+  const padT = 20;
+  const padB = 52;
+  const innerW = chartW - padL - padR;
+  const innerH = chartH - padT - padB;
+  const maxVal = Math.max(...trends.flatMap(m => [m.sales, m.cost, m.profit]), 1);
+  const slotW = innerW / trends.length;
+  const barW = Math.min(slotW * 0.2, 20);
+  const gap = barW * 0.55;
+  const groupW = barW * 3 + gap * 2;
+
+  const yPos = (val: number) => padT + innerH - (val / maxVal) * innerH;
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(maxVal * f));
+
+  const linePoints = trends.map((m, i) => `${padL + slotW * i + slotW / 2},${yPos(m.profit)}`).join(" ");
+
+  const BARS = [
+    { key: "sales" as const, color: "#10b981", hover: "#059669", label: "Gross Sales" },
+    { key: "cost"  as const, color: "#f87171", hover: "#ef4444", label: "Cost" },
+    { key: "profit"as const, color: "#6366f1", hover: "#4f46e5", label: "Net Profit" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Legend */}
+      <div className="flex items-center gap-6 flex-wrap">
+        {BARS.map(b => (
+          <div key={b.key} className="flex items-center gap-2">
+            <div className="h-3 w-3 rounded-sm" style={{ background: b.color }} />
+            <span className="text-xs font-bold text-slate-500">{b.label}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-2">
+          <svg width="24" height="10"><line x1="0" y1="5" x2="24" y2="5" stroke="#818cf8" strokeWidth="2" strokeDasharray="5 3" /></svg>
+          <span className="text-xs font-bold text-slate-500">Profit Trend</span>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="overflow-x-auto rounded-2xl bg-slate-50 border border-slate-100 p-4">
+        <svg
+          viewBox={`0 0 ${chartW} ${chartH}`}
+          style={{ minWidth: `${Math.max(chartW, trends.length * 80)}px`, height: `${chartH}px`, width: "100%" }}
+          onMouseLeave={() => setHovered(null)}
+        >
+          {/* Grid + Y labels */}
+          {yTicks.map((tick, i) => {
+            const y = yPos(tick);
+            const label = tick >= 1000 ? `$${(tick / 1000).toFixed(0)}k` : `$${tick}`;
+            return (
+              <g key={i}>
+                <line x1={padL} y1={y} x2={chartW - padR} y2={y} stroke={i === 0 ? "#cbd5e1" : "#e2e8f0"} strokeWidth="1" strokeDasharray={i === 0 ? "0" : "4 3"} />
+                <text x={padL - 8} y={y + 4} textAnchor="end" fontSize="9" fill="#94a3b8" fontWeight="700">{label}</text>
+              </g>
+            );
+          })}
+
+          {/* Bars + X labels */}
+          {trends.map((m, i) => {
+            const cx = padL + slotW * i + slotW / 2;
+            const gx = cx - groupW / 2;
+            return (
+              <g key={i}>
+                {BARS.map((b, bi) => {
+                  const val = m[b.key];
+                  const bx = gx + bi * (barW + gap);
+                  const bh = Math.max((val / maxVal) * innerH, 2);
+                  const by = yPos(val);
+                  const isHov = hovered?.monthIdx === i && hovered?.type === b.key;
+                  return (
+                    <rect
+                      key={bi} x={bx} y={by} width={barW} height={bh} rx="3"
+                      fill={isHov ? b.hover : b.color}
+                      opacity={hovered && !isHov ? 0.35 : 1}
+                      style={{ transition: "opacity 0.12s, fill 0.12s", cursor: "pointer" }}
+                      onMouseEnter={() => setHovered({ monthIdx: i, type: b.key, value: val, x: bx + barW / 2, y: by })}
+                    />
+                  );
+                })}
+                <text x={cx} y={chartH - padB + 18} textAnchor="middle" fontSize="9" fill="#64748b" fontWeight="700">
+                  {m.month.length > 8 ? m.month.slice(0, 7) : m.month}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Profit trend dashed line */}
+          <polyline points={linePoints} fill="none" stroke="#818cf8" strokeWidth="2" strokeDasharray="6 3" strokeLinecap="round" strokeLinejoin="round" />
+          {trends.map((m, i) => (
+            <circle key={i} cx={padL + slotW * i + slotW / 2} cy={yPos(m.profit)} r="4" fill="#6366f1" stroke="white" strokeWidth="2" />
+          ))}
+
+          {/* Tooltip */}
+          {hovered && (() => {
+            const tipW = 96;
+            const tx = Math.min(Math.max(hovered.x - tipW / 2, padL), chartW - padR - tipW);
+            const ty = Math.max(hovered.y - 42, 4);
+            const barDef = BARS.find(b => b.key === hovered.type);
+            return (
+              <g>
+                <rect x={tx} y={ty} width={tipW} height={30} rx="7" fill="#0f172a" opacity="0.9" />
+                <text x={tx + tipW / 2} y={ty + 12} textAnchor="middle" fontSize="9" fill="#94a3b8" fontWeight="600">{barDef?.label}</text>
+                <text x={tx + tipW / 2} y={ty + 24} textAnchor="middle" fontSize="11" fill="white" fontWeight="800">${hovered.value.toLocaleString()}</text>
+              </g>
+            );
+          })()}
+        </svg>
+      </div>
+
+      {/* Data Table */}
+      <div className="overflow-x-auto rounded-xl border border-slate-100">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest">
+            <tr>
+              <th className="px-6 py-3">Month</th>
+              <th className="px-6 py-3">Gross Income</th>
+              <th className="px-6 py-3">Investment (Cost)</th>
+              <th className="px-6 py-3">Net Profit</th>
+              <th className="px-6 py-3 text-right">Margin</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {trends.map((month) => {
+              const margin = (month.profit / (month.sales || 1)) * 100;
+              return (
+                <tr key={month.month} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 font-bold text-slate-900">{month.month}</td>
+                  <td className="px-6 py-4 text-emerald-600 font-medium">${month.sales.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-rose-500 font-medium">${month.cost.toLocaleString()}</td>
+                  <td className="px-6 py-4 font-black text-slate-900">${month.profit.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${margin > 20 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                      {margin.toFixed(1)}%
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -878,37 +1033,7 @@ export default function AdminDashboardPage() {
             {/* Monthly Financial Performance */}
             <div className="mb-12">
               <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-6">Monthly Financial Performance</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-widest">
-                    <tr>
-                      <th className="px-6 py-3">Month</th>
-                      <th className="px-6 py-3">Gross Income</th>
-                      <th className="px-6 py-3">Investment (Cost)</th>
-                      <th className="px-6 py-3">Net Profit</th>
-                      <th className="px-6 py-3 text-right">Margin</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {report?.trends.map((month) => {
-                      const margin = (month.profit / (month.sales || 1)) * 100;
-                      return (
-                        <tr key={month.month} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 font-bold text-slate-900">{month.month}</td>
-                          <td className="px-6 py-4 text-emerald-600 font-medium">${month.sales.toLocaleString()}</td>
-                          <td className="px-6 py-4 text-rose-500 font-medium">${month.cost.toLocaleString()}</td>
-                          <td className="px-6 py-4 font-black text-slate-900">${month.profit.toLocaleString()}</td>
-                          <td className="px-6 py-4 text-right">
-                            <span className={`px-2 py-1 rounded-lg text-[10px] font-black ${margin > 20 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                              {margin.toFixed(1)}%
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <MonthlyProfitChart trends={report?.trends ?? []} />
             </div>
 
             <div className="mb-12">

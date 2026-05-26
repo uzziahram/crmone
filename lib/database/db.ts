@@ -9,6 +9,9 @@ const database = mysql.createPool({
   password: process.env.DB_PASSWORD as string,
   database: process.env.DB_NAME as string,
   port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
+  ssl: {
+    rejectUnauthorized: true // This forces the secure transport required by TiDB
+  },
 });
 
 export default database;
