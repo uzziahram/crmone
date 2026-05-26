@@ -4,7 +4,6 @@ import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { z } from "zod";
-import { errorResponse } from "@/lib/api-utils";
 
 const productSchema = z.object({
   product_name: z.string().min(1, "Product name is required"),
@@ -52,9 +51,9 @@ export async function POST(request: Request) {
     const validation = productSchema.safeParse(rawData);
 
     if (!validation.success) {
-      return errorResponse(
-        validation.error.errors.map((e) => e.message).join(", "),
-        400
+      return NextResponse.json(
+        { error: validation.error.issues[0].message },
+        { status: 400 }
       );
     }
 

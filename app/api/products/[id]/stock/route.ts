@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import database from "@/lib/database/db";
 import { z } from "zod";
-import { errorResponse } from "@/lib/api-utils";
 
 const stockSchema = z.object({
   stock_quantity: z.number().min(0, "Stock quantity cannot be negative"),
@@ -29,9 +28,9 @@ export async function PATCH(
     const validation = stockSchema.safeParse(json);
 
     if (!validation.success) {
-      return errorResponse(
-        validation.error.errors.map((e) => e.message).join(", "),
-        400
+      return NextResponse.json(
+        { error: validation.error.issues[0].message },
+        { status: 400 }
       );
     }
 

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import database from "@/lib/database/db"; 
 import { z } from "zod";
-import { errorResponse } from "@/lib/api-utils";
 
 const addToCartSchema = z.object({
   customer_id: z.number().positive(),
@@ -20,9 +19,9 @@ export async function POST(request: Request) {
     const validation = addToCartSchema.safeParse(json);
 
     if (!validation.success) {
-      return errorResponse(
-        validation.error.errors.map((e) => e.message).join(", "),
-        400
+      return NextResponse.json(
+        { error: validation.error.issues[0].message },
+        { status: 400 }
       );
     }
 
@@ -96,9 +95,9 @@ export async function PUT(request: Request) {
     const validation = updateCartSchema.safeParse(json);
 
     if (!validation.success) {
-      return errorResponse(
-        validation.error.errors.map((e) => e.message).join(", "),
-        400
+      return NextResponse.json(
+        { error: validation.error.issues[0].message },
+        { status: 400 }
       );
     }
 
